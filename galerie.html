@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#5b0d1b">
+<meta name="description" content="Galerie photos et vidéos — Mariage de Jennifer & Arnaud — 13 Novembre 2026">
+<title>Galerie photos & vidéos — Jennifer & Arnaud</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: { wine:'#5b0d1b', wine2:'#7a1528', gold:'#c9a227', cream:'#fbf7ef', ink:'#241a1b' },
+        fontFamily: { serif:['Playfair Display','serif'], script:['Great Vibes','cursive'] }
+      }
+    }
+  };
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:wght@500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  body { font-family:'Montserrat',sans-serif; background:#fbf7ef; color:#241a1b; }
+  .serif { font-family:'Playfair Display',serif; }
+  .script { font-family:'Great Vibes',cursive; }
+  .section-label { font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:#8d6d18;font-weight:700; }
+  .photo-card { position:relative; border-radius:14px; overflow:hidden; background:#eee1c6; aspect-ratio:1/1; }
+  .photo-card img { width:100%; height:100%; object-fit:cover; display:block; transition:transform .3s ease; }
+  .photo-card:active img { transform:scale(1.04); }
+  .dl-btn {
+    position:absolute; bottom:8px; right:8px; background:rgba(91,13,27,.85); color:#fff;
+    border-radius:999px; width:34px; height:34px; display:grid; place-items:center; font-size:15px;
+    backdrop-filter:blur(4px);
+  }
+  .play-badge {
+    position:absolute; inset:0; display:grid; place-items:center; pointer-events:none;
+  }
+  .play-badge span {
+    width:46px; height:46px; border-radius:999px; background:rgba(91,13,27,.75);
+    color:#fff; display:grid; place-items:center; font-size:18px; backdrop-filter:blur(2px);
+  }
+  #lightbox { position:fixed; inset:0; background:rgba(20,4,8,.94); z-index:60; display:none; align-items:center; justify-content:center; padding:20px; }
+  #lightbox.show { display:flex; }
+  #lightbox img, #lightbox iframe { max-width:100%; border-radius:8px; }
+  #lightbox img { max-height:80vh; }
+  #lightbox iframe { width:min(90vw,800px); height:min(70vh,450px); border:0; }
+</style>
+</head>
+<body class="min-h-screen">
+
+  <header class="text-center pt-10 pb-6 px-4">
+    <div class="section-label">Jennifer &amp; Arnaud</div>
+    <h1 class="script text-5xl text-wine mt-1">Nos souvenirs</h1>
+    <p class="text-sm text-stone-500 mt-3 max-w-md mx-auto">
+      Retrouvez ici les photos et vidéos du mariage et téléchargez-les en haute qualité.
+    </p>
+    <a href="index.html" class="inline-block mt-4 text-[11px] uppercase tracking-[.18em] text-wine border-b border-wine/40 pb-0.5">← Retour à l'invitation</a>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 pb-16">
+    <div id="loading" class="text-center text-sm text-stone-400 py-16">Chargement des photos...</div>
+    <p id="empty" class="hidden text-center text-sm text-stone-400 py-16">Les photos seront publiées ici prochainement. Revenez bientôt !</p>
+    <div id="grid" class="hidden grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+  </main>
+
+  <div id="lightbox">
+    <button id="lightboxClose" class="absolute top-5 right-5 text-white text-3xl leading-none" aria-label="Fermer">×</button>
+    <div id="lightboxContent"></div>
+  </div>
+
+  <script>
+    /* Même URL Apps Script que index.html / dashboard.html */
+    const RSVP_ENDPOINT = "https://script.google.com/macros/s/AKfycbzRszatTa7oJLFwPMaCKtkLHJQ3OlggStRKi0zANrCORirV7YXx2-FFzKIsC__Zu4ru/exec";
+
+    function loadPhotos() {
+      if (!RSVP_ENDPOINT) {
+        document.getElementById('loading').textContent =
+          "Le développeur doit encore renseigner RSVP_ENDPOINT dans ce fichier.";
+        return;
+      }
+
+      const callbackName = 'onPhotos_' + Date.now();
+      window[callbackName] = function (data) {
+        document.getElementById('loading').classList.add('hidden');
+        renderPhotos(data.photos || []);
+        delete window[callbackName];
+        script.remove();
+      };
+
+      const script = document.createElement('script');
+      script.src = RSVP_ENDPOINT + '?action=photos&callback=' + callbackName + '&t=' + Date.now();
+      script.onerror = () => {
+        document.getElementById('loading').textContent = 'Échec du chargement — vérifiez la connexion.';
+      };
+      document.body.appendChild(script);
+    }
+
+    function renderPhotos(photos) {
+      const grid = document.getElementById('grid');
+      const empty = document.getElementById('empty');
+
+      if (!photos.length) {
+        empty.classList.remove('hidden');
+        return;
+      }
+      grid.classList.remove('hidden');
+
+      photos.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'photo-card';
+        const playBadge = p.type === 'video' ? '<div class="play-badge"><span>▶</span></div>' : '';
+        card.innerHTML = `
+          <img src="${p.apercu}" alt="${escapeHtml(p.nom)}" loading="lazy">
+          ${playBadge}
+          <a class="dl-btn" href="${p.telechargement}" download aria-label="Télécharger">⬇</a>
+        `;
+        card.querySelector('img').addEventListener('click', () => openLightbox(p));
+        grid.appendChild(card);
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    const lightbox = document.getElementById('lightbox');
+    const lightboxContent = document.getElementById('lightboxContent');
+    function openLightbox(p) {
+      lightboxContent.innerHTML = p.type === 'video'
+        ? `<iframe src="${p.lecture}" allow="autoplay" allowfullscreen></iframe>`
+        : `<img src="https://drive.google.com/thumbnail?id=${p.id}&sz=w1600" alt="${escapeHtml(p.nom)}">`;
+      lightbox.classList.add('show');
+    }
+    document.getElementById('lightboxClose').addEventListener('click', () => { lightbox.classList.remove('show'); lightboxContent.innerHTML = ''; });
+    lightbox.addEventListener('click', e => { if (e.target === lightbox) { lightbox.classList.remove('show'); lightboxContent.innerHTML = ''; } });
+
+    loadPhotos();
+  </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "Dashboard RSVP — Jennifer & Arnaud",
+  "short_name": "RSVP J&A",
+  "description": "Suivi en direct des confirmations de présence pour le mariage de Jennifer & Arnaud",
+  "start_url": "./dashboard.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fbf7ef",
+  "theme_color": "#5b0d1b",
+  "lang": "fr",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

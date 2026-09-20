@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#5b0d1b">
+<meta name="robots" content="noindex, nofollow">
+<title>Ajouter des photos & vidéos — Jennifer & Arnaud</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: { wine:'#5b0d1b', wine2:'#7a1528', gold:'#c9a227', cream:'#fbf7ef', ink:'#241a1b' },
+        fontFamily: { serif:['Playfair Display','serif'] }
+      }
+    }
+  };
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  body { font-family:'Montserrat',sans-serif; background:#fbf7ef; color:#241a1b; }
+  .serif { font-family:'Playfair Display',serif; }
+  .card { background:#fff; border:1px solid #eee1c6; border-radius:16px; }
+  #lockScreen { position:fixed; inset:0; z-index:50; background:#5b0d1b; }
+  #dropzone { border:2px dashed #c9a227; border-radius:16px; }
+  #dropzone.drag { background:#f4ead0; }
+  .thumb { position:relative; border-radius:10px; overflow:hidden; aspect-ratio:1/1; background:#eee1c6; }
+  .thumb img, .thumb video { width:100%; height:100%; object-fit:cover; display:block; }
+  .thumb .tag { position:absolute; top:4px; left:4px; background:rgba(91,13,27,.8); color:#fff; font-size:9px; padding:2px 6px; border-radius:999px; text-transform:uppercase; }
+  .status { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff; background:rgba(36,26,27,.45); }
+  .status.ok { background:rgba(43,110,63,.55); }
+  .status.err { background:rgba(122,21,40,.65); }
+</style>
+</head>
+<body class="min-h-screen">
+
+  <div id="lockScreen" class="flex items-center justify-center p-6">
+    <div class="max-w-sm text-center text-white">
+      <div class="text-4xl mb-3">🔒</div>
+      <h1 class="serif text-2xl mb-2">Accès privé</h1>
+      <p class="text-sm text-white/70" id="lockMsg">Cet espace n'est accessible qu'avec le lien privé d'administration.</p>
+    </div>
+  </div>
+
+  <div id="app" class="hidden max-w-xl mx-auto px-4 pb-16 pt-8">
+    <header class="text-center mb-6">
+      <div class="text-xs tracking-[.2em] uppercase text-gold">Jennifer &amp; Arnaud</div>
+      <h1 class="serif text-3xl mt-1">Ajouter des photos &amp; vidéos</h1>
+      <p class="text-xs text-stone-500 mt-2">Les fichiers ajoutés ici apparaissent immédiatement dans la <a href="galerie.html" class="underline">galerie</a>.</p>
+    </header>
+
+    <label id="dropzone" class="block text-center py-10 px-4 cursor-pointer mb-5">
+      <div class="text-3xl mb-2">📷</div>
+      <div class="text-sm text-stone-600">Toucher pour choisir des photos ou vidéos</div>
+      <div class="text-[11px] text-stone-400 mt-1">Photos : 15 Mo max · Vidéos : 25 Mo max</div>
+      <input id="fileInput" type="file" accept="image/*,video/*" multiple class="hidden">
+    </label>
+
+    <div class="card p-4 mb-5 text-xs text-stone-500 leading-5">
+      Pour une vidéo plus lourde que 25 Mo, ajoutez-la directement dans le
+      <a id="driveLink" href="#" target="_blank" rel="noopener" class="text-wine underline">dossier Google Drive</a>
+      de la galerie — elle apparaîtra automatiquement sur le site, sans passer par ce formulaire.
+    </div>
+
+    <div id="grid" class="grid grid-cols-3 gap-2 mb-5"></div>
+
+    <button id="sendBtn" class="hidden w-full bg-wine text-white rounded-full py-3 text-sm uppercase tracking-[.1em]">
+      Envoyer
+    </button>
+    <p id="progress" class="text-center text-xs text-stone-500 mt-3"></p>
+  </div>
+
+  <script>
+    /* Même URL Apps Script que les autres pages */
+    const RSVP_ENDPOINT = "https://script.google.com/macros/s/AKfycbzRszatTa7oJLFwPMaCKtkLHJQ3OlggStRKi0zANrCORirV7YXx2-FFzKIsC__Zu4ru/exec";
+
+    /* Même ID que PHOTOS_FOLDER_ID dans google_apps_script_RSVP.gs, pour le lien "ouvrir dans Drive" */
+    const DRIVE_FOLDER_ID = "1maf2z-SBKR86RMc594Uu5sc6l0jmFSfL";
+    if (DRIVE_FOLDER_ID) {
+      document.getElementById('driveLink').href = 'https://drive.google.com/drive/folders/' + DRIVE_FOLDER_ID;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('cle');
+    if (urlToken) {
+      localStorage.setItem('uploadToken', urlToken);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    const token = urlToken || localStorage.getItem('uploadToken') || '';
+
+    const lockScreen = document.getElementById('lockScreen');
+    const app = document.getElementById('app');
+
+    if (!token || !RSVP_ENDPOINT) {
+      document.getElementById('lockMsg').textContent = !RSVP_ENDPOINT
+        ? "Le développeur doit encore renseigner RSVP_ENDPOINT dans ce fichier."
+        : "Cet espace n'est accessible qu'avec le lien privé d'administration.";
+    } else {
+      lockScreen.classList.add('hidden');
+      app.classList.remove('hidden');
+    }
+
+    const MAX_SIZE_IMAGE = 15 * 1024 * 1024;
+    const MAX_SIZE_VIDEO = 25 * 1024 * 1024;
+    let queue = [];
+
+    const fileInput = document.getElementById('fileInput');
+    const dropzone = document.getElementById('dropzone');
+    const grid = document.getElementById('grid');
+    const sendBtn = document.getElementById('sendBtn');
+    const progress = document.getElementById('progress');
+
+    fileInput.addEventListener('change', () => addFiles(fileInput.files));
+
+    ['dragover','dragenter'].forEach(evt =>
+      dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('drag'); })
+    );
+    ['dragleave','drop'].forEach(evt =>
+      dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('drag'); })
+    );
+    dropzone.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+
+    function addFiles(fileList) {
+      const files = Array.from(fileList).filter(f =>
+        f.type.indexOf('image/') === 0 || f.type.indexOf('video/') === 0
+      );
+      files.forEach(file => {
+        const isVideo = file.type.indexOf('video/') === 0;
+        const limite = isVideo ? MAX_SIZE_VIDEO : MAX_SIZE_IMAGE;
+        if (file.size > limite) {
+          alert(file.name + ' dépasse ' + Math.round(limite / 1024 / 1024) + ' Mo — ajoutez-la directement dans le dossier Google Drive.');
+          return;
+        }
+        const item = { file, isVideo, status: 'pending', el: null };
+        queue.push(item);
+        renderThumb(item);
+      });
+      sendBtn.classList.toggle('hidden', queue.length === 0);
+    }
+
+    function renderThumb(item) {
+      const div = document.createElement('div');
+      div.className = 'thumb';
+      const media = document.createElement(item.isVideo ? 'video' : 'img');
+      media.src = URL.createObjectURL(item.file);
+      if (item.isVideo) { media.muted = true; media.preload = 'metadata'; }
+      div.appendChild(media);
+      if (item.isVideo) {
+        const tag = document.createElement('div');
+        tag.className = 'tag';
+        tag.textContent = 'vidéo';
+        div.appendChild(tag);
+      }
+      grid.appendChild(div);
+      item.el = div;
+    }
+
+    function setStatus(item, status, label) {
+      item.status = status;
+      const old = item.el.querySelector('.status');
+      if (old) old.remove();
+      const badge = document.createElement('div');
+      badge.className = 'status' + (status === 'ok' ? ' ok' : status === 'err' ? ' err' : '');
+      badge.textContent = label;
+      item.el.appendChild(badge);
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function uploadOne(item) {
+      setStatus(item, 'pending', 'Envoi...');
+      try {
+        const data = await fileToBase64(item.file);
+        const res = await fetch(RSVP_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+          body: JSON.stringify({ token, nom: item.file.name, mime: item.file.type, data })
+        });
+        const json = await res.json();
+        if (json.success) {
+          setStatus(item, 'ok', 'Envoyée ✓');
+        } else {
+          setStatus(item, 'err', json.error || 'Échec');
+        }
+      } catch (err) {
+        setStatus(item, 'err', 'Échec réseau');
+      }
+    }
+
+    sendBtn.addEventListener('click', async () => {
+      sendBtn.disabled = true;
+      const toSend = queue.filter(i => i.status !== 'ok');
+      for (let i = 0; i < toSend.length; i++) {
+        progress.textContent = `Envoi ${i + 1} / ${toSend.length}...`;
+        await uploadOne(toSend[i]);
+      }
+      progress.textContent = 'Terminé.';
+      sendBtn.disabled = false;
+    });
+  </script>
+</body>
+</html>

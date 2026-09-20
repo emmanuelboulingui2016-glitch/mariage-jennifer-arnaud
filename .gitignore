@@ -1,0 +1,10 @@
+# Contient des jetons secrets (DASHBOARD_TOKEN, UPLOAD_TOKEN) — ne jamais publier
+google_apps_script_RSVP.gs
+
+# Documentation interne développeur (contient les liens privés avec jetons)
+README_DEVELOPPEUR.txt
+
+# Photos sources brutes — déjà intégrées en base64 dans index.html, inutiles pour l'hébergement
+1002391195.jpg
+1002627557.jpg
+1002652301.png
