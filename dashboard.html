@@ -37,6 +37,8 @@
   .badge-oui { background:#f4ead0; color:#7a5c0e; }
   .badge-non { background:#f3e3e6; color:#7a1528; }
   #lockScreen { position:fixed; inset:0; z-index:50; background:#5b0d1b; }
+  .filter-btn { border:1px solid #d6c9a8; color:#786b64; }
+  .filter-btn.active { background:#5b0d1b; border-color:#5b0d1b; color:#fff; }
 </style>
 </head>
 <body class="min-h-screen">
@@ -70,6 +72,16 @@
         <div class="text-2xl font-semibold serif text-wine" id="statNon">–</div>
         <div class="text-[11px] uppercase tracking-wide text-stone-500 mt-1">Absents</div>
       </div>
+    </div>
+
+    <p class="text-center text-[11px] text-stone-400 mb-6">
+      👁 <span id="statVisites">–</span> visites · ✨ <span id="statScratchs">–</span> cartes grattées
+    </p>
+
+    <div class="flex gap-2 mb-3">
+      <button type="button" class="filter-btn active flex-1 rounded-full px-3 py-1.5 text-xs" data-filter="all">Tous</button>
+      <button type="button" class="filter-btn flex-1 rounded-full px-3 py-1.5 text-xs" data-filter="Oui">Oui</button>
+      <button type="button" class="filter-btn flex-1 rounded-full px-3 py-1.5 text-xs" data-filter="Non">Non</button>
     </div>
 
     <div class="flex gap-2 mb-4">
@@ -130,9 +142,11 @@
         document.getElementById('statTotal').textContent = data.total ?? 0;
         document.getElementById('statOui').textContent = data.oui ?? 0;
         document.getElementById('statNon').textContent = data.non ?? 0;
+        document.getElementById('statVisites').textContent = data.visites ?? 0;
+        document.getElementById('statScratchs').textContent = data.scratchs ?? 0;
         document.getElementById('lastUpdate').textContent =
           'Mis à jour à ' + new Date().toLocaleTimeString('fr-FR');
-        render(allResponses);
+        applyFilters();
         delete window[callbackName];
         script.remove();
       };
@@ -159,15 +173,21 @@
 
       list.forEach(r => {
         const row = document.createElement('div');
-        row.className = 'card p-3 flex items-center justify-between gap-3';
+        row.className = 'card p-3 gap-3';
         const badgeClass = r.presence === 'Oui' ? 'badge-oui' : 'badge-non';
         const dateStr = r.date ? new Date(r.date).toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
+        const messageHtml = r.message
+          ? `<div class="text-xs text-stone-500 mt-2 italic border-t border-stone-100 pt-2">“${escapeHtml(r.message)}”</div>`
+          : '';
         row.innerHTML = `
-          <div>
-            <div class="text-sm font-medium">${escapeHtml(r.prenom)} ${escapeHtml(r.nom)}</div>
-            <div class="text-[11px] text-stone-400">${dateStr}</div>
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <div class="text-sm font-medium">${escapeHtml(r.prenom)} ${escapeHtml(r.nom)}</div>
+              <div class="text-[11px] text-stone-400">${dateStr}</div>
+            </div>
+            <span class="text-xs px-3 py-1 rounded-full ${badgeClass}">${escapeHtml(r.presence)}</span>
           </div>
-          <span class="text-xs px-3 py-1 rounded-full ${badgeClass}">${escapeHtml(r.presence)}</span>
+          ${messageHtml}
         `;
         container.appendChild(row);
       });
@@ -178,11 +198,25 @@
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
-    document.getElementById('search').addEventListener('input', e => {
-      const q = e.target.value.trim().toLowerCase();
+    let currentFilter = 'all';
+
+    function applyFilters() {
+      const q = document.getElementById('search').value.trim().toLowerCase();
       render(allResponses.filter(r =>
+        (currentFilter === 'all' || r.presence === currentFilter) &&
         (r.nom + ' ' + r.prenom).toLowerCase().includes(q)
       ));
+    }
+
+    document.getElementById('search').addEventListener('input', applyFilters);
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentFilter = btn.dataset.filter;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        applyFilters();
+      });
     });
 
     document.getElementById('refreshBtn').addEventListener('click', loadData);
