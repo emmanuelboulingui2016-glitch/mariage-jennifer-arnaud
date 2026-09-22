@@ -501,6 +501,7 @@
         <h3 class="serif text-2xl">Réponse déjà envoyée</h3>
         <p class="text-sm text-stone-500 mt-2" id="rsvpAlreadyText"></p>
         <button type="button" id="rsvpEdit" class="secondary-btn mt-5">Modifier ma réponse</button>
+        <a id="downloadInvitationAlready" href="invitation.html" target="_blank" class="inline-block mt-5 px-6 py-3 bg-wine text-white rounded-full text-xs uppercase tracking-[.1em] font-semibold hover:bg-wine2 transition-colors">📥 Télécharger l'invitation en PDF</a>
       </div>
 
       <div id="rsvpSuccess" class="hidden text-center py-8">
@@ -720,6 +721,15 @@
         alreadyText.textContent = `${saved.prenom} ${saved.nom} — ${saved.presence === 'Oui' ? 'Présent(e)' : 'Absent(e)'}`;
         already.classList.remove('hidden');
         form.classList.add('hidden');
+        
+        // Mettre à jour le lien de téléchargement avec le nom et prénom
+        const downloadLinkAlready = document.getElementById('downloadInvitationAlready');
+        if (downloadLinkAlready && saved.prenom && saved.nom) {
+          const params = new URLSearchParams();
+          params.set('prenom', saved.prenom);
+          params.set('nom', saved.nom);
+          downloadLinkAlready.href = 'invitation.html?' + params.toString();
+        }
       } else {
         already.classList.add('hidden');
         form.classList.remove('hidden');

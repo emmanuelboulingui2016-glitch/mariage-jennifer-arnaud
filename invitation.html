@@ -42,7 +42,7 @@
   }
   .canvas-wrap{
     width:100%;
-    aspect-ratio:16/9;
+    aspect-ratio:1920/1360;
     background:#fff;
     border-radius:4px;
     overflow:hidden;
@@ -105,7 +105,7 @@
 
   <div class="stage">
     <div class="canvas-wrap">
-      <canvas id="invitationCanvas" width="1920" height="1080"></canvas>
+      <canvas id="invitationCanvas" width="1920" height="1360"></canvas>
     </div>
   </div>
 
@@ -138,7 +138,7 @@ const C = {
   gray: '#8a7a70'
 };
 
-const W = 1920, H = 1080;
+const W = 1920, H = 1360;
 
 document.fonts.ready.then(draw);
 // Safety redraw once webfonts that load slightly late are ready
@@ -150,7 +150,7 @@ function draw(){
   drawFrame();
   drawMonogram();
   drawHeadline();
-  drawDivider(540, 476);
+  drawDivider(W/2, 616);
   drawSchedule();
   drawDetails();
   drawFooter();
@@ -233,11 +233,11 @@ function drawHeadline(){
   ctx.textAlign = 'center';
   ctx.fillStyle = C.gray;
   ctx.font = "italic 500 26px 'Cormorant Garamond'";
-  ctx.fillText('Le mariage de', cx, 268);
+  ctx.fillText('Le mariage de', cx, 264);
 
   ctx.fillStyle = C.bordeaux;
   ctx.font = "700 108px 'Tangerine'";
-  const namesY = 358;
+  const namesY = 372;
   ctx.font = "700 118px 'Tangerine'";
   const jenniferW = ctx.measureText('Jennifer').width;
   ctx.font = "italic 500 40px 'Cormorant Garamond'";
@@ -266,16 +266,15 @@ function drawHeadline(){
   ctx.textAlign = 'center';
   ctx.fillStyle = C.ink;
   ctx.font = "500 27px 'Playfair Display'";
-  ctx.fillText('ont la joie d\u2019inviter', cx, 418);
+  ctx.fillText('ont la joie d\u2019inviter', cx, 440);
 
   ctx.fillStyle = C.gold;
-  ctx.font = "600 42px 'Tangerine'";
-  ctx.font = "700 46px 'Tangerine'";
-  ctx.fillText(guestName, cx, 456);
+  ctx.font = "700 48px 'Tangerine'";
+  ctx.fillText(guestName, cx, 496);
 
   ctx.fillStyle = C.gray;
   ctx.font = "500 21px 'Playfair Display'";
-  ctx.fillText('\u00e0 c\u00e9l\u00e9brer avec eux le d\u00e9but de leur union', cx, 502);
+  ctx.fillText('\u00e0 c\u00e9l\u00e9brer avec eux le d\u00e9but de leur union', cx, 546);
 
   ctx.textAlign = 'left';
 }
@@ -302,17 +301,17 @@ function drawDivider(cx, y){
 
   ctx.textAlign = 'center';
   ctx.fillStyle = C.bordeaux;
-  ctx.font = "600 24px 'Playfair Display'";
-  ctx.fillText('13 Novembre 2026', W/2, y + 46);
+  ctx.font = "600 25px 'Playfair Display'";
+  ctx.fillText('13 Novembre 2026', W/2, y + 52);
   ctx.fillStyle = C.gray;
-  ctx.font = "italic 500 19px 'Cormorant Garamond'";
-  ctx.fillText('Libreville, Gabon', W/2, y + 74);
+  ctx.font = "italic 500 20px 'Cormorant Garamond'";
+  ctx.fillText('Libreville, Gabon', W/2, y + 88);
   ctx.textAlign = 'left';
 }
 
 /* ---------- schedule (left column) ---------- */
 function drawSchedule(){
-  const x = 150, colW = 700, top = 660;
+  const x = 150, colW = 700, top = 840;
 
   ctx.fillStyle = C.bordeaux;
   ctx.font = "italic 500 27px 'Cormorant Garamond'";
@@ -331,9 +330,9 @@ function drawSchedule(){
     ['19h00', 'Soir\u00e9e de mariage', 'Salle d\u2019Okala']
   ];
 
-  const rowH = 74;
+  const rowH = 84;
   items.forEach((item, i)=>{
-    const y = top + 70 + i*rowH;
+    const y = top + 78 + i*rowH;
     ctx.fillStyle = C.gold;
     ctx.font = "600 22px 'Playfair Display'";
     ctx.fillText(item[0], x, y);
@@ -345,15 +344,15 @@ function drawSchedule(){
     if(item[2]){
       ctx.fillStyle = C.gray;
       ctx.font = "italic 400 19px 'Cormorant Garamond'";
-      ctx.fillText(item[2], x + 108, y + 25);
+      ctx.fillText(item[2], x + 108, y + 28);
     }
 
     if(i < items.length - 1){
       ctx.strokeStyle = 'rgba(138,122,112,0.22)';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(x, y + 42);
-      ctx.lineTo(x + colW, y + 42);
+      ctx.moveTo(x, y + 52);
+      ctx.lineTo(x + colW, y + 52);
       ctx.stroke();
     }
   });
@@ -361,13 +360,13 @@ function drawSchedule(){
 
 /* ---------- details (right column) ---------- */
 function drawDetails(){
-  const x = 1000, top = 660;
+  const x = 1000, top = 840;
 
   ctx.strokeStyle = 'rgba(184,145,47,0.35)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(920, top - 40);
-  ctx.lineTo(920, top + 330);
+  ctx.lineTo(920, top + 340);
   ctx.stroke();
 
   ctx.fillStyle = C.bordeaux;
@@ -382,9 +381,9 @@ function drawDetails(){
 
   ctx.fillStyle = C.ink;
   ctx.font = "500 22px 'Playfair Display'";
-  wrapText('Chic \u00e9l\u00e9gant, dans les tons bordeaux, or et blanc cass\u00e9.', x, top + 46, 620, 30);
+  wrapText('Chic \u00e9l\u00e9gant, dans les tons bordeaux, or et blanc cass\u00e9.', x, top + 48, 620, 32);
 
-  const swatchY = top + 118;
+  const swatchY = top + 132;
   const swatches = [
     [C.bordeaux, 'Bordeaux'],
     [C.gold, 'Or'],
@@ -405,14 +404,13 @@ function drawDetails(){
     ctx.fillStyle = C.gray;
     ctx.font = "400 15px 'Montserrat'";
     ctx.textAlign = 'center';
-    ctx.fillText(s[1], cx2, swatchY + 46);
+    ctx.fillText(s[1], cx2, swatchY + 42);
     ctx.textAlign = 'left';
   });
 
-  const rsvpY = swatchY + 110;
+  const rsvpY = swatchY + 122;
   ctx.fillStyle = C.bordeaux;
   ctx.font = "italic 500 27px 'Cormorant Garamond'";
-  ctx.fillText('RSVP', x, rsvpY);
   ctx.strokeStyle = 'rgba(184,145,47,0.5)';
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -422,7 +420,7 @@ function drawDetails(){
 
   ctx.fillStyle = C.ink;
   ctx.font = "500 22px 'Playfair Display'";
-  ctx.fillText('Avant le 20 octobre 2026', x, rsvpY + 46);
+  ctx.fillText('Avant le 20 octobre 2026', x, rsvpY + 48);
 }
 
 function wrapText(text, x, y, maxWidth, lineHeight){
@@ -444,18 +442,18 @@ function wrapText(text, x, y, maxWidth, lineHeight){
 
 /* ---------- footer ---------- */
 function drawFooter(){
-  const cx = W/2, y = 1000;
+  const cx = W/2, y = 1264;
   ctx.strokeStyle = 'rgba(184,145,47,0.5)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(cx - 60, y - 30);
-  ctx.lineTo(cx + 60, y - 30);
+  ctx.moveTo(cx - 80, y - 40);
+  ctx.lineTo(cx + 80, y - 40);
   ctx.stroke();
 
   ctx.textAlign = 'center';
   ctx.fillStyle = C.gold;
-  ctx.font = "700 40px 'Tangerine'";
-  ctx.fillText('Avec amour, Jennifer & Arnaud', cx, y);
+  ctx.font = "700 38px 'Tangerine'";
+  ctx.fillText('Avec tout notre amour, Jennifer & Arnaud', cx, y);
   ctx.textAlign = 'left';
 }
 
