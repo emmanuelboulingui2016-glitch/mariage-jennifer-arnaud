@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Invitation — Jennifer & Arnaud</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Tangerine:wght@400;700&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bordeaux-deep:#3c0a18;
+    --bordeaux:#6d1228;
+    --gold:#b8912f;
+    --gold-soft:#d9b767;
+    --cream:#faf5ea;
+    --cream-deep:#f1e6d2;
+    --ink:#2a1c1a;
+    --gray:#8a7a70;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{
+    background:var(--cream-deep);
+    font-family:'Montserrat',sans-serif;
+    min-height:100%;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  body{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:32px 20px;
+    gap:26px;
+  }
+  .stage{
+    width:100%;
+    max-width:1180px;
+  }
+  .canvas-wrap{
+    width:100%;
+    aspect-ratio:16/9;
+    background:#fff;
+    border-radius:4px;
+    overflow:hidden;
+    box-shadow:0 30px 70px -20px rgba(60,10,24,0.35), 0 4px 18px rgba(60,10,24,0.12);
+  }
+  canvas{
+    width:100%;
+    height:100%;
+    display:block;
+  }
+  .caption{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:15px;
+    color:var(--gray);
+    text-align:center;
+  }
+  .actions{
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+  button{
+    font-family:'Montserrat',sans-serif;
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:0.04em;
+    padding:14px 34px;
+    border-radius:2px;
+    cursor:pointer;
+    border:1px solid var(--gold);
+    background:var(--bordeaux-deep);
+    color:var(--cream);
+    transition:background .25s ease, color .25s ease, transform .2s ease;
+  }
+  button:hover{
+    background:var(--bordeaux);
+    transform:translateY(-1px);
+  }
+  button.secondary{
+    background:transparent;
+    color:var(--bordeaux-deep);
+    border-color:rgba(184,145,47,0.6);
+  }
+  button.secondary:hover{
+    background:rgba(184,145,47,0.08);
+  }
+
+  @media print{
+    body{padding:0;background:#fff;gap:0;}
+    .stage{max-width:100%;}
+    .canvas-wrap{box-shadow:none;border-radius:0;}
+    .caption,.actions{display:none;}
+    @page{margin:0;size:A4 landscape;}
+  }
+</style>
+</head>
+<body>
+
+  <div class="stage">
+    <div class="canvas-wrap">
+      <canvas id="invitationCanvas" width="1920" height="1080"></canvas>
+    </div>
+  </div>
+
+  <p class="caption">Faites glisser le nom de l'invité dans l'adresse pour la personnaliser — <span id="hintExample"></span></p>
+
+  <div class="actions">
+    <button onclick="downloadPNG()">Télécharger l'image</button>
+    <button class="secondary" onclick="window.print()">Imprimer / PDF</button>
+  </div>
+
+<script>
+const canvas = document.getElementById('invitationCanvas');
+const ctx = canvas.getContext('2d');
+
+const params = new URLSearchParams(window.location.search);
+const prenom = (params.get('prenom') || '').trim();
+const nom = (params.get('nom') || '').trim();
+const guestName = [prenom, nom].filter(Boolean).join(' ') || 'nos proches';
+
+document.getElementById('hintExample').textContent = '?prenom=Awa&nom=Ondo';
+
+const C = {
+  bordeauxDeep: '#3c0a18',
+  bordeaux: '#6d1228',
+  gold: '#b8912f',
+  goldSoft: '#d9b767',
+  goldPale: '#eaddb6',
+  cream: '#faf5ea',
+  ink: '#2a1c1a',
+  gray: '#8a7a70'
+};
+
+const W = 1920, H = 1080;
+
+document.fonts.ready.then(draw);
+// Safety redraw once webfonts that load slightly late are ready
+setTimeout(draw, 400);
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  drawBackground();
+  drawFrame();
+  drawMonogram();
+  drawHeadline();
+  drawDivider(540, 476);
+  drawSchedule();
+  drawDetails();
+  drawFooter();
+}
+
+function drawBackground(){
+  const g = ctx.createLinearGradient(0,0,W,H);
+  g.addColorStop(0, '#ffffff');
+  g.addColorStop(1, C.cream);
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,W,H);
+}
+
+/* ---------- ornamental frame with corner flourishes ---------- */
+function drawFrame(){
+  const m1 = 34, m2 = 52;
+  ctx.strokeStyle = C.gold;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(m1, m1, W - m1*2, H - m1*2);
+  ctx.strokeStyle = 'rgba(184,145,47,0.35)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(m2, m2, W - m2*2, H - m2*2);
+
+  [[m2,m2,1,1],[W-m2,m2,-1,1],[m2,H-m2,1,-1],[W-m2,H-m2,-1,-1]].forEach(([x,y,sx,sy])=>{
+    flourish(x,y,sx,sy);
+  });
+}
+
+function flourish(x,y,sx,sy){
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.scale(sx,sy);
+  ctx.strokeStyle = C.gold;
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(0,46);
+  ctx.quadraticCurveTo(0,6,40,6);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(46,6,4.5,0,Math.PI*2);
+  ctx.strokeStyle = C.gold;
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* ---------- monogram medallion ---------- */
+function drawMonogram(){
+  const cx = W/2, cy = 150, r = 52;
+  ctx.strokeStyle = C.gold;
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r - 8, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(184,145,47,0.5)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.fillStyle = C.bordeaux;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = "italic 600 46px 'Playfair Display'";
+  ctx.fillText('J', cx - 24, cy + 2);
+  ctx.fillText('A', cx + 24, cy + 2);
+  ctx.fillStyle = C.gold;
+  ctx.font = "italic 26px 'Tangerine'";
+  ctx.font = "300 20px 'Cormorant Garamond'";
+  ctx.font = "italic 500 22px 'Cormorant Garamond'";
+  ctx.fillText('&', cx, cy + 3);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+}
+
+/* ---------- headline block ---------- */
+function drawHeadline(){
+  const cx = W/2;
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = C.gray;
+  ctx.font = "italic 500 26px 'Cormorant Garamond'";
+  ctx.fillText('Le mariage de', cx, 268);
+
+  ctx.fillStyle = C.bordeaux;
+  ctx.font = "700 108px 'Tangerine'";
+  const namesY = 358;
+  ctx.font = "700 118px 'Tangerine'";
+  const jenniferW = ctx.measureText('Jennifer').width;
+  ctx.font = "italic 500 40px 'Cormorant Garamond'";
+  const ampW = ctx.measureText('&').width;
+  ctx.font = "700 118px 'Tangerine'";
+  const arnaudW = ctx.measureText('Arnaud').width;
+  const gap = 34;
+  const total = jenniferW + gap + ampW + gap + arnaudW;
+  let x = cx - total/2;
+
+  ctx.textAlign = 'left';
+  ctx.fillStyle = C.bordeaux;
+  ctx.font = "700 118px 'Tangerine'";
+  ctx.fillText('Jennifer', x, namesY);
+  x += jenniferW + gap;
+
+  ctx.fillStyle = C.gold;
+  ctx.font = "italic 500 40px 'Cormorant Garamond'";
+  ctx.fillText('&', x, namesY - 6);
+  x += ampW + gap;
+
+  ctx.fillStyle = C.bordeaux;
+  ctx.font = "700 118px 'Tangerine'";
+  ctx.fillText('Arnaud', x, namesY);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = C.ink;
+  ctx.font = "500 27px 'Playfair Display'";
+  ctx.fillText('ont la joie d\u2019inviter', cx, 418);
+
+  ctx.fillStyle = C.gold;
+  ctx.font = "600 42px 'Tangerine'";
+  ctx.font = "700 46px 'Tangerine'";
+  ctx.fillText(guestName, cx, 456);
+
+  ctx.fillStyle = C.gray;
+  ctx.font = "500 21px 'Playfair Display'";
+  ctx.fillText('\u00e0 c\u00e9l\u00e9brer avec eux le d\u00e9but de leur union', cx, 502);
+
+  ctx.textAlign = 'left';
+}
+
+/* ---------- small ornamental divider ---------- */
+function drawDivider(cx, y){
+  const half = 210;
+  ctx.strokeStyle = 'rgba(184,145,47,0.55)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(W/2 - half, y);
+  ctx.lineTo(W/2 - 14, y);
+  ctx.moveTo(W/2 + 14, y);
+  ctx.lineTo(W/2 + half, y);
+  ctx.stroke();
+
+  ctx.save();
+  ctx.translate(W/2, y);
+  ctx.rotate(Math.PI/4);
+  ctx.strokeStyle = C.gold;
+  ctx.lineWidth = 1.4;
+  ctx.strokeRect(-7,-7,14,14);
+  ctx.restore();
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = C.bordeaux;
+  ctx.font = "600 24px 'Playfair Display'";
+  ctx.fillText('13 Novembre 2026', W/2, y + 46);
+  ctx.fillStyle = C.gray;
+  ctx.font = "italic 500 19px 'Cormorant Garamond'";
+  ctx.fillText('Libreville, Gabon', W/2, y + 74);
+  ctx.textAlign = 'left';
+}
+
+/* ---------- schedule (left column) ---------- */
+function drawSchedule(){
+  const x = 150, colW = 700, top = 660;
+
+  ctx.fillStyle = C.bordeaux;
+  ctx.font = "italic 500 27px 'Cormorant Garamond'";
+  ctx.fillText('D\u00e9roul\u00e9 de la journ\u00e9e', x, top);
+  ctx.strokeStyle = 'rgba(184,145,47,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x, top + 14);
+  ctx.lineTo(x + 92, top + 14);
+  ctx.stroke();
+
+  const items = [
+    ['09h00', 'Mariage coutumier', 'Ak\u00e9b\u00e9'],
+    ['16h00', 'Mariage civil', 'Mairie de Nombak\u00e9l\u00e9'],
+    ['17h00', 'Tour de ville', ''],
+    ['19h00', 'Soir\u00e9e de mariage', 'Salle d\u2019Okala']
+  ];
+
+  const rowH = 74;
+  items.forEach((item, i)=>{
+    const y = top + 70 + i*rowH;
+    ctx.fillStyle = C.gold;
+    ctx.font = "600 22px 'Playfair Display'";
+    ctx.fillText(item[0], x, y);
+
+    ctx.fillStyle = C.ink;
+    ctx.font = "500 24px 'Playfair Display'";
+    ctx.fillText(item[1], x + 108, y);
+
+    if(item[2]){
+      ctx.fillStyle = C.gray;
+      ctx.font = "italic 400 19px 'Cormorant Garamond'";
+      ctx.fillText(item[2], x + 108, y + 25);
+    }
+
+    if(i < items.length - 1){
+      ctx.strokeStyle = 'rgba(138,122,112,0.22)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, y + 42);
+      ctx.lineTo(x + colW, y + 42);
+      ctx.stroke();
+    }
+  });
+}
+
+/* ---------- details (right column) ---------- */
+function drawDetails(){
+  const x = 1000, top = 660;
+
+  ctx.strokeStyle = 'rgba(184,145,47,0.35)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(920, top - 40);
+  ctx.lineTo(920, top + 330);
+  ctx.stroke();
+
+  ctx.fillStyle = C.bordeaux;
+  ctx.font = "italic 500 27px 'Cormorant Garamond'";
+  ctx.fillText('Tenue souhait\u00e9e', x, top);
+  ctx.strokeStyle = 'rgba(184,145,47,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x, top + 14);
+  ctx.lineTo(x + 92, top + 14);
+  ctx.stroke();
+
+  ctx.fillStyle = C.ink;
+  ctx.font = "500 22px 'Playfair Display'";
+  wrapText('Chic \u00e9l\u00e9gant, dans les tons bordeaux, or et blanc cass\u00e9.', x, top + 46, 620, 30);
+
+  const swatchY = top + 118;
+  const swatches = [
+    [C.bordeaux, 'Bordeaux'],
+    [C.gold, 'Or'],
+    ['#f4efe3', 'Blanc cass\u00e9']
+  ];
+  swatches.forEach((s, i)=>{
+    const cx2 = x + 24 + i*130;
+    ctx.beginPath();
+    ctx.arc(cx2, swatchY, 22, 0, Math.PI*2);
+    ctx.fillStyle = s[0];
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(184,145,47,0.5)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = C.gray;
+    ctx.font = "400 15px 'Montserrat'";
+    ctx.textAlign = 'center';
+    ctx.fillText(s[1], cx2, swatchY + 46);
+    ctx.textAlign = 'left';
+  });
+
+  const rsvpY = swatchY + 110;
+  ctx.fillStyle = C.bordeaux;
+  ctx.font = "italic 500 27px 'Cormorant Garamond'";
+  ctx.fillText('RSVP', x, rsvpY);
+  ctx.strokeStyle = 'rgba(184,145,47,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x, rsvpY + 14);
+  ctx.lineTo(x + 92, rsvpY + 14);
+  ctx.stroke();
+
+  ctx.fillStyle = C.ink;
+  ctx.font = "500 22px 'Playfair Display'";
+  ctx.fillText('Avant le 20 octobre 2026', x, rsvpY + 46);
+}
+
+function wrapText(text, x, y, maxWidth, lineHeight){
+  const words = text.split(' ');
+  let line = '';
+  let curY = y;
+  for(let n=0; n<words.length; n++){
+    const test = line + words[n] + ' ';
+    if(ctx.measureText(test).width > maxWidth && n > 0){
+      ctx.fillText(line, x, curY);
+      line = words[n] + ' ';
+      curY += lineHeight;
+    } else {
+      line = test;
+    }
+  }
+  ctx.fillText(line, x, curY);
+}
+
+/* ---------- footer ---------- */
+function drawFooter(){
+  const cx = W/2, y = 1000;
+  ctx.strokeStyle = 'rgba(184,145,47,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx - 60, y - 30);
+  ctx.lineTo(cx + 60, y - 30);
+  ctx.stroke();
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = C.gold;
+  ctx.font = "700 40px 'Tangerine'";
+  ctx.fillText('Avec amour, Jennifer & Arnaud', cx, y);
+  ctx.textAlign = 'left';
+}
+
+function downloadPNG(){
+  const link = document.createElement('a');
+  const safeName = (guestName || 'invite').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_');
+  link.download = `invitation_jennifer_arnaud_${safeName}.png`;
+  link.href = canvas.toDataURL('image/png', 1.0);
+  link.click();
+}
+</script>
+</body>
+</html>

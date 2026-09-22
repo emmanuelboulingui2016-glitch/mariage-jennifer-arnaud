@@ -507,6 +507,7 @@
         <div class="text-5xl mb-3">♥</div>
         <h3 class="serif text-2xl">Merci !</h3>
         <p class="text-sm text-stone-500 mt-2">Votre réponse a bien été enregistrée sur cet appareil.</p>
+        <a id="downloadInvitation" href="invitation.html" target="_blank" class="inline-block mt-5 px-6 py-3 bg-wine text-white rounded-full text-xs uppercase tracking-[.1em] font-semibold hover:bg-wine2 transition-colors">📥 Télécharger l'invitation en PDF</a>
       </div>
     </div>
   </div>
@@ -795,6 +796,16 @@
         }
         form.classList.add('hidden');
         success.classList.remove('hidden');
+        
+        // Mettre à jour le lien de téléchargement avec le nom et prénom
+        const downloadLink = document.getElementById('downloadInvitation');
+        if (downloadLink && data.prenom && data.nom) {
+          const params = new URLSearchParams();
+          params.set('prenom', data.prenom);
+          params.set('nom', data.nom);
+          downloadLink.href = 'invitation.html?' + params.toString();
+        }
+        
         if(data.presence === 'Oui') launchConfetti();
       } catch (error) {
         alert("Impossible d'envoyer la confirmation pour le moment. Vérifiez votre connexion Internet et réessayez.");
