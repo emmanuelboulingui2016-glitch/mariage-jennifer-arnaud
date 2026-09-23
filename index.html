@@ -116,12 +116,17 @@
     #intro.open .curtain.left { transform:translateX(-102%); }
     #intro.open .curtain.right { transform:translateX(102%); }
     .stage {
-      position:absolute; inset:0; display:grid; place-items:center; padding:30px;
-      background:
-        radial-gradient(circle at center,rgba(201,162,39,.12),transparent 34%),
-        linear-gradient(#25030a,#130207);
+      position:absolute; inset:0; z-index:4; display:grid; place-items:center; padding:30px;
+      pointer-events:none;
+      background:radial-gradient(ellipse at center,rgba(20,2,8,.72),rgba(20,2,8,.35) 45%,transparent 70%);
     }
-    .intro-content { position:relative; z-index:2; text-align:center; color:#fff; max-width:500px; }
+    .intro-content {
+      position:relative; z-index:2; text-align:center; color:#fff; max-width:500px;
+      pointer-events:auto; text-shadow:0 2px 16px rgba(0,0,0,.75);
+      transition:opacity .7s ease, transform .7s ease;
+    }
+    #intro.open .intro-content { opacity:0; transform:scale(.96); pointer-events:none; }
+    #intro.open .stage { opacity:0; transition:opacity .7s ease; }
     .seal {
       width:78px;height:78px;border:1px solid rgba(234,213,138,.65);border-radius:50%;
       display:grid;place-items:center;margin:0 auto 20px;
