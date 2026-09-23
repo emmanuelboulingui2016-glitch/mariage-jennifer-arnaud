@@ -106,6 +106,7 @@
     </div>
   </div>
 
+
   <div class="actions">
     <button onclick="downloadPNG()">Télécharger l'image</button>
     <button class="secondary" onclick="window.print()">Imprimer / PDF</button>
@@ -121,7 +122,6 @@ const prenom = (params.get('prenom') || '').trim();
 const nom = (params.get('nom') || '').trim();
 const guestName = [prenom, nom].filter(Boolean).join(' ') || 'Nom de l\u2019invit\u00e9';
 
-document.getElementById('hintExample').textContent = '?prenom=Awa&nom=Ondo';
 
 const bgImage = new Image();
 bgImage.crossOrigin = "anonymous";
