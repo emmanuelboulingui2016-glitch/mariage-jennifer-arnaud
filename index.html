@@ -86,11 +86,11 @@
       z-index:100;
       background:#21030a;
       overflow:hidden;
-      transition:visibility .1s linear 2.6s;
+      transition:opacity .9s ease, visibility 0s linear .9s;
     }
-    #intro.open { visibility:hidden; pointer-events:none; }
+    #intro.done { opacity:0; visibility:hidden; pointer-events:none; }
     html.intro-lock, html.intro-lock body { overflow:hidden; }
-    .hero-card.hero-reveal { animation:heroReveal 2s ease-out 1s both; }
+    .hero-card.hero-reveal { animation:heroReveal 1.8s ease-out .3s both; }
     @keyframes heroReveal { from { opacity:0;transform:translateY(24px); } to { opacity:1;transform:none; } }
     .curtain {
       position:absolute;
@@ -103,7 +103,8 @@
         repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 7px,rgba(0,0,0,.08) 7px 15px),
         linear-gradient(90deg,#31030c,#7a0e20 42%,#4b0712);
       box-shadow:inset 0 0 45px rgba(0,0,0,.55),0 0 30px rgba(0,0,0,.45);
-      transition:transform 2.6s cubic-bezier(.77,0,.18,1);
+      cursor:pointer;
+      transition:transform 2.4s cubic-bezier(.77,0,.18,1);
     }
     .curtain:after {
       content:'';
@@ -116,17 +117,18 @@
     #intro.open .curtain.left { transform:translateX(-102%); }
     #intro.open .curtain.right { transform:translateX(102%); }
     .stage {
-      position:absolute; inset:0; z-index:4; display:grid; place-items:center; padding:30px;
-      pointer-events:none;
-      background:radial-gradient(ellipse at center,rgba(20,2,8,.72),rgba(20,2,8,.35) 45%,transparent 70%);
+      position:absolute; inset:0; display:grid; place-items:center; padding:30px;
+      background:
+        radial-gradient(circle at center,rgba(201,162,39,.12),transparent 34%),
+        linear-gradient(#25030a,#130207);
     }
-    .intro-content {
-      position:relative; z-index:2; text-align:center; color:#fff; max-width:500px;
-      pointer-events:auto; text-shadow:0 2px 16px rgba(0,0,0,.75);
-      transition:opacity .7s ease, transform .7s ease;
+    .intro-content { position:relative; z-index:2; text-align:center; color:#fff; max-width:500px; }
+    .curtain-hint {
+      position:absolute; left:0; right:0; bottom:9%; z-index:5; text-align:center;
+      font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:rgba(255,255,255,.55);
+      pointer-events:none; animation:bob 1.8s infinite; transition:opacity .5s ease;
     }
-    #intro.open .intro-content { opacity:0; transform:scale(.96); pointer-events:none; }
-    #intro.open .stage { opacity:0; transition:opacity .7s ease; }
+    #intro.open .curtain-hint { opacity:0; }
     .seal {
       width:78px;height:78px;border:1px solid rgba(234,213,138,.65);border-radius:50%;
       display:grid;place-items:center;margin:0 auto 20px;
@@ -308,6 +310,7 @@
     </div>
     <div class="curtain left"></div>
     <div class="curtain right"></div>
+    <p class="curtain-hint">Faites défiler ou touchez pour ouvrir le rideau</p>
   </div>
 
   <!-- ===================== HERO ===================== -->
@@ -544,24 +547,42 @@
     /* ===================== OUVERTURE DU RIDEAU ===================== */
     const intro = document.getElementById('intro');
     const openBtn = document.getElementById('openBtn');
-    let opened = false;
+    let curtainsOpen = false;
+    let entered = false;
 
-    // Le rideau ne s'ouvre que par un clic sur le bouton. Le défilement reste bloqué tant
-    // qu'il est fermé, puis quelques secondes après son ouverture, pour laisser le temps de lire.
+    // Étape 1 : le rideau s'ouvre (défilement, toucher ou clic) et laisse voir la page
+    // "Ouvrir l'invitation", qui reste affichée. Étape 2 : seul un clic sur le bouton
+    // mène au site. Le défilement du site reste bloqué pendant toute l'ouverture.
     document.documentElement.classList.add('intro-lock');
     window.scrollTo(0, 0);
+    openBtn.tabIndex = -1;
 
-    function openInvitation() {
-      if (opened) return;
-      opened = true;
-      window.scrollTo(0, 0);
+    function openCurtains() {
+      if (curtainsOpen) return;
+      curtainsOpen = true;
       intro.classList.add('open');
-      document.querySelector('.hero-card').classList.add('hero-reveal');
-      setTimeout(() => intro.remove(), 2800);
-      setTimeout(() => document.documentElement.classList.remove('intro-lock'), 6000);
+      openBtn.tabIndex = 0;
     }
 
-    openBtn.addEventListener('click', openInvitation);
+    function enterInvitation() {
+      if (!curtainsOpen) { openCurtains(); return; }
+      if (entered) return;
+      entered = true;
+      window.scrollTo(0, 0);
+      intro.classList.add('done');
+      document.querySelector('.hero-card').classList.add('hero-reveal');
+      setTimeout(() => intro.remove(), 1000);
+      setTimeout(() => document.documentElement.classList.remove('intro-lock'), 3500);
+    }
+
+    openBtn.addEventListener('click', enterInvitation);
+    document.querySelectorAll('.curtain').forEach(c => c.addEventListener('click', openCurtains));
+    window.addEventListener('wheel', openCurtains, { passive:true, once:true });
+    window.addEventListener('touchmove', openCurtains, { passive:true, once:true });
+    window.addEventListener('keydown', e => {
+      if (document.activeElement !== document.body) return;
+      if (['ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) openCurtains();
+    });
 
     /* ===================== SCRATCH CARD ===================== */
     const canvas = document.getElementById('scratchCanvas');
