@@ -77,6 +77,31 @@
       border-color: #5b0d1b;
       color: #fff;
     }
+
+    .type-btn {
+      border: 1px solid #d6c9a8;
+      color: #786b64;
+      background: #fff;
+    }
+
+    .type-btn.active {
+      background: #5b0d1b;
+      border-color: #5b0d1b;
+      color: #fff;
+    }
+
+    .manual-input {
+      border: 1px solid #ded4c9;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+      width: 100%;
+    }
+
+    .manual-input:focus {
+      outline: none;
+      border-color: #c9a227;
+    }
   </style>
 </head>
 
@@ -116,6 +141,31 @@
     <p class="text-center text-[11px] text-stone-400 mb-6">
       👁 <span id="statVisites">–</span> visites · ✨ <span id="statScratchs">–</span> cartes grattées
     </p>
+
+    <details class="card p-4 mb-6">
+      <summary class="cursor-pointer text-sm font-medium text-wine">➕ Ajouter un invité sans smartphone</summary>
+      <p class="text-xs text-stone-500 mt-2 mb-3">Pour les invités qui ne recevront pas de lien (pas de téléphone/technologie). Les ajoute à la liste des confirmés et ouvre leur carte à imprimer.</p>
+
+      <div class="flex gap-2 mb-3">
+        <button type="button" class="type-btn active flex-1 rounded-full px-3 py-1.5 text-xs" data-manual-type="individuel">Individuel</button>
+        <button type="button" class="type-btn flex-1 rounded-full px-3 py-1.5 text-xs" data-manual-type="couple">Couple</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 mb-2">
+        <input id="manualPrenom" class="manual-input" placeholder="Prénom">
+        <input id="manualNom" class="manual-input" placeholder="Nom">
+      </div>
+
+      <div id="manualPartnerFields" class="hidden grid grid-cols-2 gap-2 mb-2">
+        <input id="manualPrenom2" class="manual-input" placeholder="Prénom du/de la partenaire">
+        <input id="manualNom2" class="manual-input" placeholder="Nom du/de la partenaire">
+      </div>
+
+      <button id="manualGenerateBtn" class="w-full bg-wine text-white rounded-full py-2.5 text-sm font-medium mt-2">
+        Ajouter et générer la carte
+      </button>
+      <p id="manualStatus" class="text-xs text-center text-stone-400 mt-2"></p>
+    </details>
 
     <div class="flex gap-2 mb-3">
       <button type="button" class="filter-btn active flex-1 rounded-full px-3 py-1.5 text-xs"
@@ -222,16 +272,24 @@
         const messageHtml = r.message
           ? `<div class="text-xs text-stone-500 mt-2 italic border-t border-stone-100 pt-2">“${escapeHtml(r.message)}”</div>`
           : '';
+        const isCouple = r.type === 'couple' && r.nom2 && r.prenom2;
+        const displayName = isCouple
+          ? `${escapeHtml(r.prenom)} ${escapeHtml(r.nom)} & ${escapeHtml(r.prenom2)} ${escapeHtml(r.nom2)}`
+          : `${escapeHtml(r.prenom)} ${escapeHtml(r.nom)}`;
+        const invitationUrl = isCouple
+          ? `invitation.html?prenom=${encodeURIComponent(r.prenom + ' ' + r.nom + ' &')}&nom=${encodeURIComponent(r.prenom2 + ' ' + r.nom2)}`
+          : `invitation.html?prenom=${encodeURIComponent(r.prenom)}&nom=${encodeURIComponent(r.nom)}`;
+        const coupleTag = isCouple ? `<span class="text-[10px] uppercase tracking-wide text-gold ml-1">· Couple</span>` : '';
         row.innerHTML = `
           <div class="flex items-center justify-between gap-3">
             <div>
-              <div class="text-sm font-medium">${escapeHtml(r.prenom)} ${escapeHtml(r.nom)}</div>
+              <div class="text-sm font-medium">${displayName}${coupleTag}</div>
               <div class="text-[11px] text-stone-400">${dateStr}</div>
             </div>
             <div class="flex items-center gap-3">
               <span class="text-xs px-3 py-1 rounded-full ${badgeClass}">${escapeHtml(r.presence)}</span>
-              <a href="invitation.html?prenom=${escapeHtml(r.prenom)}&nom=${escapeHtml(r.nom)}" class="bg-wine text-white text-sm text-xs px-3 py-1 rounded-full" >
-        Télécharger l'invitation
+              <a href="${invitationUrl}" target="_blank" class="bg-wine text-white text-xs px-3 py-1 rounded-full whitespace-nowrap">
+        Invitation
       </a>
           </div>
               </div>
@@ -268,6 +326,68 @@
     });
 
     document.getElementById('refreshBtn').addEventListener('click', loadData);
+
+    /* ===================== AJOUT MANUEL (invités sans smartphone) ===================== */
+    let manualType = 'individuel';
+    document.querySelectorAll('[data-manual-type]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        manualType = btn.dataset.manualType;
+        document.querySelectorAll('[data-manual-type]').forEach(b => b.classList.toggle('active', b === btn));
+        document.getElementById('manualPartnerFields').classList.toggle('hidden', manualType !== 'couple');
+      });
+    });
+
+    document.getElementById('manualGenerateBtn').addEventListener('click', async () => {
+      const prenom = document.getElementById('manualPrenom').value.trim();
+      const nom = document.getElementById('manualNom').value.trim();
+      const prenom2 = document.getElementById('manualPrenom2').value.trim();
+      const nom2 = document.getElementById('manualNom2').value.trim();
+      const status = document.getElementById('manualStatus');
+      const btn = document.getElementById('manualGenerateBtn');
+
+      if (!prenom || !nom) { status.textContent = 'Prénom et nom requis.'; return; }
+      if (manualType === 'couple' && (!prenom2 || !nom2)) {
+        status.textContent = 'Prénom et nom du/de la partenaire requis.';
+        return;
+      }
+
+      btn.disabled = true;
+      status.textContent = 'Ajout en cours...';
+
+      const payload = {
+        type: manualType, nom, prenom,
+        nom2: manualType === 'couple' ? nom2 : '',
+        prenom2: manualType === 'couple' ? prenom2 : '',
+        presence: 'Oui', message: '',
+        source: 'Ajout manuel depuis le dashboard'
+      };
+
+      try {
+        if (RSVP_ENDPOINT) {
+          await fetch(RSVP_ENDPOINT, {
+            method: 'POST', mode: 'no-cors',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+            body: new URLSearchParams(payload).toString()
+          });
+        }
+
+        const invitationUrl = manualType === 'couple'
+          ? `invitation.html?prenom=${encodeURIComponent(prenom + ' ' + nom + ' &')}&nom=${encodeURIComponent(prenom2 + ' ' + nom2)}`
+          : `invitation.html?prenom=${encodeURIComponent(prenom)}&nom=${encodeURIComponent(nom)}`;
+        window.open(invitationUrl, '_blank');
+
+        status.textContent = 'Ajouté ✓ — carte ouverte dans un nouvel onglet.';
+        document.getElementById('manualPrenom').value = '';
+        document.getElementById('manualNom').value = '';
+        document.getElementById('manualPrenom2').value = '';
+        document.getElementById('manualNom2').value = '';
+        loadData();
+      } catch (e) {
+        status.textContent = "Échec de l'ajout — réessayez.";
+      } finally {
+        btn.disabled = false;
+      }
+    });
 
     /* ===================== INSTALLATION PWA ===================== */
     let deferredPrompt = null;

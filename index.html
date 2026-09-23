@@ -254,6 +254,12 @@
       background:var(--wine); color:#fff; border:1px solid rgba(234,213,138,.5); display:grid; place-items:center;
       font-size:18px; box-shadow:0 12px 30px rgba(36,26,27,.3); cursor:pointer;
     }
+    .type-toggle { display:flex;gap:8px;margin:2px 0 4px; }
+    .type-btn {
+      flex:1;padding:10px;border:1px solid #ded4c9;border-radius:999px;background:#fff;
+      font:12px 'Montserrat';font-weight:600;color:#786b64;cursor:pointer;transition:.2s;
+    }
+    .type-btn.active { background:var(--wine);border-color:var(--wine);color:#fff; }
     .form-actions { display:flex;gap:10px;margin-top:20px; }
     .secondary-btn { flex:1;padding:13px;border:1px solid #cfc3b8;background:transparent;border-radius:999px;cursor:pointer; }
     .submit-btn { flex:2;padding:13px;border:0;background:var(--wine);color:#fff;border-radius:999px;font-weight:700;cursor:pointer; }
@@ -407,14 +413,14 @@
         <div class="section-label">Élégance exigée</div>
         <h2 class="section-title">Dress Code</h2>
         <p class="serif italic text-lg text-stone-600 max-w-xl mx-auto">
-          Tenue de soirée / Chic — Formal Attire
+          Tenue de soirée / Chic — Tenue Formelle
         </p>
 
         <div class="dress-grid text-left">
           <div class="dress-card">
             <div class="text-3xl mb-3">♢</div>
             <h3 class="serif text-2xl">Palette</h3>
-            <p class="text-sm text-stone-500 mt-2 leading-6">Rouge bordeaux, or et blanc cassé. Une touche raffinée est la bienvenue.</p>
+            <p class="text-sm text-stone-500 mt-2 leading-6">Rouge bordeaux, doré et blanc cassé. Une touche raffinée est la bienvenue.</p>
             <div class="swatches">
               <span class="swatch wine-s" title="Bordeaux"></span>
               <span class="swatch gold-s" title="Or"></span>
@@ -472,11 +478,26 @@
       </div>
 
       <form id="rsvpForm">
+        <label>Vous confirmez</label>
+        <div class="type-toggle" role="radiogroup" aria-label="Type d'inscription">
+          <button type="button" class="type-btn active" data-type="individuel" aria-pressed="true">Individuel</button>
+          <button type="button" class="type-btn" data-type="couple" aria-pressed="false">Couple</button>
+        </div>
+        <input type="hidden" name="type" id="rsvpType" value="individuel">
+
         <label for="nom">Nom</label>
         <input id="nom" name="nom" required autocomplete="family-name" placeholder="Votre nom">
 
         <label for="prenom">Prénom</label>
         <input id="prenom" name="prenom" required autocomplete="given-name" placeholder="Votre prénom">
+
+        <div id="partnerFields" class="hidden">
+          <label for="nom2">Nom du/de la partenaire</label>
+          <input id="nom2" name="nom2" autocomplete="off" placeholder="Nom du/de la partenaire">
+
+          <label for="prenom2">Prénom du/de la partenaire</label>
+          <input id="prenom2" name="prenom2" autocomplete="off" placeholder="Prénom du/de la partenaire">
+        </div>
 
         <label for="presence">Présence</label>
         <select id="presence" name="presence" required>
@@ -706,6 +727,52 @@
     const already = document.getElementById('rsvpAlready');
     const alreadyText = document.getElementById('rsvpAlreadyText');
     const rsvpOpenBtn = document.getElementById('rsvpOpen');
+    const rsvpTypeInput = document.getElementById('rsvpType');
+    const partnerFields = document.getElementById('partnerFields');
+    const nom2Input = document.getElementById('nom2');
+    const prenom2Input = document.getElementById('prenom2');
+
+    /* ===================== TYPE INDIVIDUEL / COUPLE ===================== */
+    function setRsvpType(type) {
+      rsvpTypeInput.value = type;
+      document.querySelectorAll('.type-btn').forEach(btn => {
+        const isActive = btn.dataset.type === type;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-pressed', String(isActive));
+      });
+      if (type === 'couple') {
+        partnerFields.classList.remove('hidden');
+        nom2Input.required = true;
+        prenom2Input.required = true;
+      } else {
+        partnerFields.classList.add('hidden');
+        nom2Input.required = false;
+        prenom2Input.required = false;
+      }
+    }
+    document.querySelectorAll('.type-btn').forEach(btn => {
+      btn.addEventListener('click', () => setRsvpType(btn.dataset.type));
+    });
+
+    function guestLabel(entry) {
+      const main = `${entry.prenom} ${entry.nom}`;
+      if (entry.type === 'couple' && entry.prenom2 && entry.nom2) {
+        return `${main} & ${entry.prenom2} ${entry.nom2}`;
+      }
+      return main;
+    }
+
+    function buildInvitationUrl(entry) {
+      const params = new URLSearchParams();
+      if (entry.type === 'couple' && entry.prenom2 && entry.nom2) {
+        params.set('prenom', `${entry.prenom} ${entry.nom} &`);
+        params.set('nom', `${entry.prenom2} ${entry.nom2}`);
+      } else {
+        params.set('prenom', entry.prenom);
+        params.set('nom', entry.nom);
+      }
+      return 'invitation.html?' + params.toString();
+    }
 
     function getSavedRsvp() {
       try { return JSON.parse(localStorage.getItem('weddingRSVP') || 'null'); } catch (e) { return null; }
@@ -718,17 +785,14 @@
 
       const saved = getSavedRsvp();
       if (saved) {
-        alreadyText.textContent = `${saved.prenom} ${saved.nom} — ${saved.presence === 'Oui' ? 'Présent(e)' : 'Absent(e)'}`;
+        alreadyText.textContent = `${guestLabel(saved)} — ${saved.presence === 'Oui' ? 'Présent(e)' : 'Absent(e)'}`;
         already.classList.remove('hidden');
         form.classList.add('hidden');
-        
-        // Mettre à jour le lien de téléchargement avec le nom et prénom
+
+        // Mettre à jour le lien de téléchargement avec le(s) nom(s)
         const downloadLinkAlready = document.getElementById('downloadInvitationAlready');
         if (downloadLinkAlready && saved.prenom && saved.nom) {
-          const params = new URLSearchParams();
-          params.set('prenom', saved.prenom);
-          params.set('nom', saved.nom);
-          downloadLinkAlready.href = 'invitation.html?' + params.toString();
+          downloadLinkAlready.href = buildInvitationUrl(saved);
         }
       } else {
         already.classList.add('hidden');
@@ -752,8 +816,11 @@
       already.classList.add('hidden');
       form.classList.remove('hidden');
       if (saved) {
+        setRsvpType(saved.type === 'couple' ? 'couple' : 'individuel');
         document.getElementById('nom').value = saved.nom || '';
         document.getElementById('prenom').value = saved.prenom || '';
+        nom2Input.value = saved.nom2 || '';
+        prenom2Input.value = saved.prenom2 || '';
         document.getElementById('presence').value = saved.presence || '';
         document.getElementById('message').value = saved.message || '';
       }
@@ -797,7 +864,15 @@
       const originalLabel = submitBtn.textContent;
       submitBtn.textContent = 'Envoi...';
 
-      const payload = {nom:data.nom, prenom:data.prenom, presence:data.presence, message:data.message || '', source:'Invitation mariage Jennifer & Arnaud', submittedAt:new Date().toISOString()};
+      const isCouple = data.type === 'couple';
+      const payload = {
+        type: isCouple ? 'couple' : 'individuel',
+        nom:data.nom, prenom:data.prenom,
+        nom2: isCouple ? (data.nom2 || '') : '',
+        prenom2: isCouple ? (data.prenom2 || '') : '',
+        presence:data.presence, message:data.message || '',
+        source:'Invitation mariage Jennifer & Arnaud', submittedAt:new Date().toISOString()
+      };
       try {
         // Copie locale de sécurité, conservée même si l'endpoint est configuré
         localStorage.setItem('weddingRSVP', JSON.stringify(payload));
@@ -806,16 +881,13 @@
         }
         form.classList.add('hidden');
         success.classList.remove('hidden');
-        
-        // Mettre à jour le lien de téléchargement avec le nom et prénom
+
+        // Mettre à jour le lien de téléchargement avec le(s) nom(s)
         const downloadLink = document.getElementById('downloadInvitation');
         if (downloadLink && data.prenom && data.nom) {
-          const params = new URLSearchParams();
-          params.set('prenom', data.prenom);
-          params.set('nom', data.nom);
-          downloadLink.href = 'invitation.html?' + params.toString();
+          downloadLink.href = buildInvitationUrl(payload);
         }
-        
+
         if(data.presence === 'Oui') launchConfetti();
       } catch (error) {
         alert("Impossible d'envoyer la confirmation pour le moment. Vérifiez votre connexion Internet et réessayez.");
