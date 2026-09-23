@@ -299,7 +299,6 @@
         <div class="script text-6xl text-amber-100">Jennifer &amp; Arnaud</div>
         <p class="serif italic text-white/70 mt-3 mb-8">Deux vies, une promesse, une histoire à célébrer.</p>
         <button class="open-btn" id="openBtn">Ouvrir l'invitation</button>
-        <p class="text-[9px] text-white/35 mt-5 tracking-[.15em]">Faites défiler pour ouvrir</p>
       </div>
     </div>
     <div class="curtain left"></div>
@@ -542,8 +541,8 @@
     const openBtn = document.getElementById('openBtn');
     let opened = false;
 
-    // Le défilement reste bloqué tant que le rideau est fermé, puis quelques secondes
-    // après son ouverture, pour laisser le temps de lire la première page.
+    // Le rideau ne s'ouvre que par un clic sur le bouton. Le défilement reste bloqué tant
+    // qu'il est fermé, puis quelques secondes après son ouverture, pour laisser le temps de lire.
     document.documentElement.classList.add('intro-lock');
     window.scrollTo(0, 0);
 
@@ -558,11 +557,6 @@
     }
 
     openBtn.addEventListener('click', openInvitation);
-    window.addEventListener('wheel', openInvitation, { passive:true, once:true });
-    window.addEventListener('touchmove', openInvitation, { passive:true, once:true });
-    window.addEventListener('keydown', e => {
-      if (['ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) openInvitation();
-    });
 
     /* ===================== SCRATCH CARD ===================== */
     const canvas = document.getElementById('scratchCanvas');
