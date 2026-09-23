@@ -86,9 +86,12 @@
       z-index:100;
       background:#21030a;
       overflow:hidden;
-      transition:visibility .1s linear 1.2s;
+      transition:visibility .1s linear 2.6s;
     }
     #intro.open { visibility:hidden; pointer-events:none; }
+    html.intro-lock, html.intro-lock body { overflow:hidden; }
+    .hero-card.hero-reveal { animation:heroReveal 2s ease-out 1s both; }
+    @keyframes heroReveal { from { opacity:0;transform:translateY(24px); } to { opacity:1;transform:none; } }
     .curtain {
       position:absolute;
       top:0;
@@ -100,7 +103,7 @@
         repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 7px,rgba(0,0,0,.08) 7px 15px),
         linear-gradient(90deg,#31030c,#7a0e20 42%,#4b0712);
       box-shadow:inset 0 0 45px rgba(0,0,0,.55),0 0 30px rgba(0,0,0,.45);
-      transition:transform 1.35s cubic-bezier(.77,0,.18,1);
+      transition:transform 2.6s cubic-bezier(.77,0,.18,1);
     }
     .curtain:after {
       content:'';
@@ -501,8 +504,8 @@
         <label for="presence">Présence</label>
         <select id="presence" name="presence" required>
           <option value="">Sélectionnez une réponse</option>
-          <option value="Oui">Oui, je serai présent(e) ♥</option>
-          <option value="Non">Non, malheureusement</option>
+          <option id="optOui" value="Oui">Oui, je serai présent(e) ♥</option>
+          <option id="optNon" value="Non">Non, malheureusement</option>
         </select>
 
         <label for="message">Un mot pour les mariés (facultatif)</label>
@@ -539,17 +542,27 @@
     const openBtn = document.getElementById('openBtn');
     let opened = false;
 
+    // Le défilement reste bloqué tant que le rideau est fermé, puis quelques secondes
+    // après son ouverture, pour laisser le temps de lire la première page.
+    document.documentElement.classList.add('intro-lock');
+    window.scrollTo(0, 0);
+
     function openInvitation() {
       if (opened) return;
       opened = true;
+      window.scrollTo(0, 0);
       intro.classList.add('open');
-      setTimeout(() => intro.remove(), 1500);
+      document.querySelector('.hero-card').classList.add('hero-reveal');
+      setTimeout(() => intro.remove(), 2800);
+      setTimeout(() => document.documentElement.classList.remove('intro-lock'), 6000);
     }
 
     openBtn.addEventListener('click', openInvitation);
-    window.addEventListener('scroll', () => {
-      if (window.scrollY > 8) openInvitation();
-    }, { passive:true });
+    window.addEventListener('wheel', openInvitation, { passive:true, once:true });
+    window.addEventListener('touchmove', openInvitation, { passive:true, once:true });
+    window.addEventListener('keydown', e => {
+      if (['ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) openInvitation();
+    });
 
     /* ===================== SCRATCH CARD ===================== */
     const canvas = document.getElementById('scratchCanvas');
@@ -741,19 +754,14 @@
         btn.classList.toggle('active', isActive);
         btn.setAttribute('aria-pressed', String(isActive));
       });
-      if (type === 'couple') {
-        soloFields.classList.add('hidden');
-        coupleFields.classList.remove('hidden');
-        nomInput.required = false;
-        prenomInput.required = false;
-        nomCoupleInput.required = true;
-      } else {
-        soloFields.classList.remove('hidden');
-        coupleFields.classList.add('hidden');
-        nomInput.required = true;
-        prenomInput.required = true;
-        nomCoupleInput.required = false;
-      }
+      const isCouple = type === 'couple';
+      soloFields.classList.toggle('hidden', isCouple);
+      coupleFields.classList.toggle('hidden', !isCouple);
+      nomInput.required = !isCouple;
+      prenomInput.required = !isCouple;
+      nomCoupleInput.required = isCouple;
+      document.getElementById('optOui').textContent = isCouple ? 'Oui, nous serons présents ♥' : 'Oui, je serai présent(e) ♥';
+      document.getElementById('optNon').textContent = isCouple ? 'Non, nous ne pourrons malheureusement pas venir' : 'Non, malheureusement';
     }
     document.querySelectorAll('.type-btn').forEach(btn => {
       btn.addEventListener('click', () => setRsvpType(btn.dataset.type));
@@ -787,7 +795,9 @@
 
       const saved = getSavedRsvp();
       if (saved) {
-        alreadyText.textContent = `${guestLabel(saved)} — ${saved.presence === 'Oui' ? 'Présent(e)' : 'Absent(e)'}`;
+        const pluriel = saved.type === 'couple';
+        const statut = saved.presence === 'Oui' ? (pluriel ? 'Présents' : 'Présent(e)') : (pluriel ? 'Absents' : 'Absent(e)');
+        alreadyText.textContent = `${guestLabel(saved)} — ${statut}`;
         already.classList.remove('hidden');
         form.classList.add('hidden');
 
