@@ -485,18 +485,17 @@
         </div>
         <input type="hidden" name="type" id="rsvpType" value="individuel">
 
-        <label for="nom">Nom</label>
-        <input id="nom" name="nom" required autocomplete="family-name" placeholder="Votre nom">
+        <div id="soloFields">
+          <label for="nom">Nom</label>
+          <input id="nom" name="nom" autocomplete="family-name" placeholder="Votre nom">
 
-        <label for="prenom">Prénom</label>
-        <input id="prenom" name="prenom" required autocomplete="given-name" placeholder="Votre prénom">
+          <label for="prenom">Prénom</label>
+          <input id="prenom" name="prenom" autocomplete="given-name" placeholder="Votre prénom">
+        </div>
 
-        <div id="partnerFields" class="hidden">
-          <label for="nom2">Nom du/de la partenaire</label>
-          <input id="nom2" name="nom2" autocomplete="off" placeholder="Nom du/de la partenaire">
-
-          <label for="prenom2">Prénom du/de la partenaire</label>
-          <input id="prenom2" name="prenom2" autocomplete="off" placeholder="Prénom du/de la partenaire">
+        <div id="coupleFields" class="hidden">
+          <label for="nomCouple">Nom du couple</label>
+          <input id="nomCouple" name="nomCouple" autocomplete="off" placeholder="ex. BOULINGUI">
         </div>
 
         <label for="presence">Présence</label>
@@ -728,9 +727,11 @@
     const alreadyText = document.getElementById('rsvpAlreadyText');
     const rsvpOpenBtn = document.getElementById('rsvpOpen');
     const rsvpTypeInput = document.getElementById('rsvpType');
-    const partnerFields = document.getElementById('partnerFields');
-    const nom2Input = document.getElementById('nom2');
-    const prenom2Input = document.getElementById('prenom2');
+    const soloFields = document.getElementById('soloFields');
+    const coupleFields = document.getElementById('coupleFields');
+    const nomInput = document.getElementById('nom');
+    const prenomInput = document.getElementById('prenom');
+    const nomCoupleInput = document.getElementById('nomCouple');
 
     /* ===================== TYPE INDIVIDUEL / COUPLE ===================== */
     function setRsvpType(type) {
@@ -741,13 +742,17 @@
         btn.setAttribute('aria-pressed', String(isActive));
       });
       if (type === 'couple') {
-        partnerFields.classList.remove('hidden');
-        nom2Input.required = true;
-        prenom2Input.required = true;
+        soloFields.classList.add('hidden');
+        coupleFields.classList.remove('hidden');
+        nomInput.required = false;
+        prenomInput.required = false;
+        nomCoupleInput.required = true;
       } else {
-        partnerFields.classList.add('hidden');
-        nom2Input.required = false;
-        prenom2Input.required = false;
+        soloFields.classList.remove('hidden');
+        coupleFields.classList.add('hidden');
+        nomInput.required = true;
+        prenomInput.required = true;
+        nomCoupleInput.required = false;
       }
     }
     document.querySelectorAll('.type-btn').forEach(btn => {
@@ -755,18 +760,15 @@
     });
 
     function guestLabel(entry) {
-      const main = `${entry.prenom} ${entry.nom}`;
-      if (entry.type === 'couple' && entry.prenom2 && entry.nom2) {
-        return `${main} & ${entry.prenom2} ${entry.nom2}`;
-      }
-      return main;
+      if (entry.type === 'couple') return `Couple ${entry.nom}`;
+      return `${entry.prenom} ${entry.nom}`;
     }
 
     function buildInvitationUrl(entry) {
       const params = new URLSearchParams();
-      if (entry.type === 'couple' && entry.prenom2 && entry.nom2) {
-        params.set('prenom', `${entry.prenom} ${entry.nom} &`);
-        params.set('nom', `${entry.prenom2} ${entry.nom2}`);
+      if (entry.type === 'couple') {
+        params.set('prenom', 'Couple');
+        params.set('nom', entry.nom);
       } else {
         params.set('prenom', entry.prenom);
         params.set('nom', entry.nom);
@@ -791,7 +793,7 @@
 
         // Mettre à jour le lien de téléchargement avec le(s) nom(s)
         const downloadLinkAlready = document.getElementById('downloadInvitationAlready');
-        if (downloadLinkAlready && saved.prenom && saved.nom) {
+        if (downloadLinkAlready && saved.nom) {
           downloadLinkAlready.href = buildInvitationUrl(saved);
         }
       } else {
@@ -815,19 +817,22 @@
       const saved = getSavedRsvp();
       already.classList.add('hidden');
       form.classList.remove('hidden');
+      const type = saved && saved.type === 'couple' ? 'couple' : 'individuel';
+      setRsvpType(type);
       if (saved) {
-        setRsvpType(saved.type === 'couple' ? 'couple' : 'individuel');
-        document.getElementById('nom').value = saved.nom || '';
-        document.getElementById('prenom').value = saved.prenom || '';
-        nom2Input.value = saved.nom2 || '';
-        prenom2Input.value = saved.prenom2 || '';
+        if (type === 'couple') {
+          nomCoupleInput.value = saved.nom || '';
+        } else {
+          nomInput.value = saved.nom || '';
+          prenomInput.value = saved.prenom || '';
+        }
         document.getElementById('presence').value = saved.presence || '';
         document.getElementById('message').value = saved.message || '';
       }
       const submitBtn = form.querySelector('.submit-btn');
       submitBtn.disabled = false;
       submitBtn.textContent = 'Envoyer ma réponse';
-      setTimeout(() => document.getElementById('nom').focus(), 100);
+      setTimeout(() => (type === 'couple' ? nomCoupleInput : nomInput).focus(), 100);
     });
 
     // Piège de focus clavier : le Tab reste à l'intérieur du modal tant qu'il est ouvert
@@ -867,9 +872,8 @@
       const isCouple = data.type === 'couple';
       const payload = {
         type: isCouple ? 'couple' : 'individuel',
-        nom:data.nom, prenom:data.prenom,
-        nom2: isCouple ? (data.nom2 || '') : '',
-        prenom2: isCouple ? (data.prenom2 || '') : '',
+        nom: isCouple ? (data.nomCouple || '') : data.nom,
+        prenom: isCouple ? 'Couple' : data.prenom,
         presence:data.presence, message:data.message || '',
         source:'Invitation mariage Jennifer & Arnaud', submittedAt:new Date().toISOString()
       };
@@ -884,7 +888,7 @@
 
         // Mettre à jour le lien de téléchargement avec le(s) nom(s)
         const downloadLink = document.getElementById('downloadInvitation');
-        if (downloadLink && data.prenom && data.nom) {
+        if (downloadLink && payload.nom) {
           downloadLink.href = buildInvitationUrl(payload);
         }
 

@@ -151,14 +151,13 @@
         <button type="button" class="type-btn flex-1 rounded-full px-3 py-1.5 text-xs" data-manual-type="couple">Couple</button>
       </div>
 
-      <div class="grid grid-cols-2 gap-2 mb-2">
+      <div id="manualSoloFields" class="grid grid-cols-2 gap-2 mb-2">
         <input id="manualPrenom" class="manual-input" placeholder="Prénom">
         <input id="manualNom" class="manual-input" placeholder="Nom">
       </div>
 
-      <div id="manualPartnerFields" class="hidden grid grid-cols-2 gap-2 mb-2">
-        <input id="manualPrenom2" class="manual-input" placeholder="Prénom du/de la partenaire">
-        <input id="manualNom2" class="manual-input" placeholder="Nom du/de la partenaire">
+      <div id="manualCoupleFields" class="hidden mb-2">
+        <input id="manualNomCouple" class="manual-input w-full" placeholder="Nom du couple (ex. BOULINGUI)">
       </div>
 
       <button id="manualGenerateBtn" class="w-full bg-wine text-white rounded-full py-2.5 text-sm font-medium mt-2">
@@ -272,18 +271,17 @@
         const messageHtml = r.message
           ? `<div class="text-xs text-stone-500 mt-2 italic border-t border-stone-100 pt-2">“${escapeHtml(r.message)}”</div>`
           : '';
-        const isCouple = r.type === 'couple' && r.nom2 && r.prenom2;
+        const isCouple = r.type === 'couple';
         const displayName = isCouple
-          ? `${escapeHtml(r.prenom)} ${escapeHtml(r.nom)} & ${escapeHtml(r.prenom2)} ${escapeHtml(r.nom2)}`
+          ? `Couple ${escapeHtml(r.nom)}`
           : `${escapeHtml(r.prenom)} ${escapeHtml(r.nom)}`;
         const invitationUrl = isCouple
-          ? `invitation.html?prenom=${encodeURIComponent(r.prenom + ' ' + r.nom + ' &')}&nom=${encodeURIComponent(r.prenom2 + ' ' + r.nom2)}`
+          ? `invitation.html?prenom=${encodeURIComponent('Couple')}&nom=${encodeURIComponent(r.nom)}`
           : `invitation.html?prenom=${encodeURIComponent(r.prenom)}&nom=${encodeURIComponent(r.nom)}`;
-        const coupleTag = isCouple ? `<span class="text-[10px] uppercase tracking-wide text-gold ml-1">· Couple</span>` : '';
         row.innerHTML = `
           <div class="flex items-center justify-between gap-3">
             <div>
-              <div class="text-sm font-medium">${displayName}${coupleTag}</div>
+              <div class="text-sm font-medium">${displayName}</div>
               <div class="text-[11px] text-stone-400">${dateStr}</div>
             </div>
             <div class="flex items-center gap-3">
@@ -333,21 +331,22 @@
       btn.addEventListener('click', () => {
         manualType = btn.dataset.manualType;
         document.querySelectorAll('[data-manual-type]').forEach(b => b.classList.toggle('active', b === btn));
-        document.getElementById('manualPartnerFields').classList.toggle('hidden', manualType !== 'couple');
+        document.getElementById('manualSoloFields').classList.toggle('hidden', manualType === 'couple');
+        document.getElementById('manualCoupleFields').classList.toggle('hidden', manualType !== 'couple');
       });
     });
 
     document.getElementById('manualGenerateBtn').addEventListener('click', async () => {
       const prenom = document.getElementById('manualPrenom').value.trim();
       const nom = document.getElementById('manualNom').value.trim();
-      const prenom2 = document.getElementById('manualPrenom2').value.trim();
-      const nom2 = document.getElementById('manualNom2').value.trim();
+      const nomCouple = document.getElementById('manualNomCouple').value.trim();
       const status = document.getElementById('manualStatus');
       const btn = document.getElementById('manualGenerateBtn');
 
-      if (!prenom || !nom) { status.textContent = 'Prénom et nom requis.'; return; }
-      if (manualType === 'couple' && (!prenom2 || !nom2)) {
-        status.textContent = 'Prénom et nom du/de la partenaire requis.';
+      if (manualType === 'couple') {
+        if (!nomCouple) { status.textContent = 'Nom du couple requis.'; return; }
+      } else if (!prenom || !nom) {
+        status.textContent = 'Prénom et nom requis.';
         return;
       }
 
@@ -355,9 +354,9 @@
       status.textContent = 'Ajout en cours...';
 
       const payload = {
-        type: manualType, nom, prenom,
-        nom2: manualType === 'couple' ? nom2 : '',
-        prenom2: manualType === 'couple' ? prenom2 : '',
+        type: manualType,
+        nom: manualType === 'couple' ? nomCouple : nom,
+        prenom: manualType === 'couple' ? 'Couple' : prenom,
         presence: 'Oui', message: '',
         source: 'Ajout manuel depuis le dashboard'
       };
@@ -371,16 +370,13 @@
           });
         }
 
-        const invitationUrl = manualType === 'couple'
-          ? `invitation.html?prenom=${encodeURIComponent(prenom + ' ' + nom + ' &')}&nom=${encodeURIComponent(prenom2 + ' ' + nom2)}`
-          : `invitation.html?prenom=${encodeURIComponent(prenom)}&nom=${encodeURIComponent(nom)}`;
+        const invitationUrl = `invitation.html?prenom=${encodeURIComponent(payload.prenom)}&nom=${encodeURIComponent(payload.nom)}`;
         window.open(invitationUrl, '_blank');
 
         status.textContent = 'Ajouté ✓ — carte ouverte dans un nouvel onglet.';
         document.getElementById('manualPrenom').value = '';
         document.getElementById('manualNom').value = '';
-        document.getElementById('manualPrenom2').value = '';
-        document.getElementById('manualNom2').value = '';
+        document.getElementById('manualNomCouple').value = '';
         loadData();
       } catch (e) {
         status.textContent = "Échec de l'ajout — réessayez.";
