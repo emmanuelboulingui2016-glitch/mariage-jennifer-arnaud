@@ -12,3 +12,8 @@ photo-couple-original.jpg
 
 # Livrable d'impression, pas un asset du site
 qr-code-invitation.png
+
+# Fichiers de travail intermédiaires — la version web se trouve dans invitation-fond.jpg
+image.png
+image-base64.text
+invitation-fond-original.png
