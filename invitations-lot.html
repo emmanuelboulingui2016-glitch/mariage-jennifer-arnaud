@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Cartes d'invitation en lot — Jennifer & Arnaud</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,500;1,600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bordeaux:#7a1528;
+    --gold:#b8912f;
+    --cream:#f2e9d8;
+    --gray:#8a7a70;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{
+    background:var(--cream);
+    font-family:'Montserrat',sans-serif;
+  }
+  body{padding:24px 20px 48px;}
+  .toolbar{
+    position:sticky;top:0;z-index:5;
+    max-width:620px;margin:0 auto 24px;padding:14px 16px;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    background:#fff;border:1px solid rgba(184,145,47,.4);border-radius:12px;
+  }
+  .toolbar p{font-size:13px;color:var(--gray);}
+  .toolbar a{font-size:12px;color:var(--bordeaux);}
+  button{
+    font-family:'Montserrat',sans-serif;font-size:13px;font-weight:600;letter-spacing:.04em;
+    padding:12px 24px;border-radius:2px;cursor:pointer;
+    border:1px solid var(--gold);background:var(--bordeaux);color:#fdf8ee;
+  }
+  button.secondary{background:transparent;color:var(--bordeaux);border-color:rgba(184,145,47,.6);padding:8px 16px;font-size:12px;}
+  .page{max-width:620px;margin:0 auto 32px;}
+  .canvas-wrap{
+    width:100%;aspect-ratio:1131/1600;background:#fff;border-radius:4px;overflow:hidden;
+    box-shadow:0 30px 70px -20px rgba(60,10,24,.35),0 4px 18px rgba(60,10,24,.12);
+  }
+  canvas{width:100%;height:100%;display:block;}
+  .card-actions{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;
+  }
+  .caption{font-family:'Playfair Display',serif;font-style:italic;font-size:14px;color:var(--gray);}
+  #empty{max-width:620px;margin:40px auto;text-align:center;color:var(--gray);font-size:14px;}
+  [hidden]{display:none !important;}
+
+  @media print{
+    html,body{background:#fff;}
+    body{padding:0;}
+    .toolbar,.card-actions,#empty{display:none !important;}
+    .page{max-width:100%;margin:0;break-after:page;page-break-after:always;}
+    .page:last-child{break-after:auto;page-break-after:auto;}
+    .canvas-wrap{box-shadow:none;border-radius:0;}
+    @page{margin:0;size:A4 portrait;}
+  }
+</style>
+</head>
+<body>
+
+  <div class="toolbar">
+    <div>
+      <p id="count">Chargement…</p>
+      <a href="dashboard.html">← Retour au dashboard</a>
+    </div>
+    <button id="printBtn" type="button" hidden>Imprimer / PDF (toutes les cartes)</button>
+  </div>
+
+  <main id="pages"></main>
+  <p id="empty" hidden>Aucune carte à afficher. Retournez au dashboard et saisissez les invités dans « Ajouter plusieurs invités ».</p>
+
+<script>
+const W = 1131, H = 1600;
+
+let guests = [];
+try {
+  const raw = JSON.parse(localStorage.getItem('batchInvitations') || '[]');
+  if (Array.isArray(raw)) {
+    guests = raw
+      .map(g => [String((g && g.prenom) || '').trim(), String((g && g.nom) || '').trim()].filter(Boolean).join(' '))
+      .filter(Boolean);
+  }
+} catch (e) {}
+
+const pages = document.getElementById('pages');
+const count = document.getElementById('count');
+const printBtn = document.getElementById('printBtn');
+
+function drawGuestName(ctx, name) {
+  const leftX = 157;
+  const baselineY = 780;
+  const maxWidth = 800;
+
+  let fontSize = 65;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+
+  do {
+    ctx.font = `italic 600 ${fontSize}px 'Playfair Display'`;
+    if (ctx.measureText(name).width <= maxWidth) break;
+    fontSize -= 2;
+  } while (fontSize > 28);
+
+  ctx.fillStyle = '#4a453f';
+  ctx.fillText(name.toUpperCase(), leftX, baselineY);
+}
+
+function downloadPNG(canvas, name) {
+  const safeName = name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '_');
+  const link = document.createElement('a');
+  link.download = `invitation_jennifer_arnaud_${safeName}.png`;
+  link.href = canvas.toDataURL('image/png', 1.0);
+  link.click();
+}
+
+if (!guests.length) {
+  count.textContent = '0 carte';
+  document.getElementById('empty').hidden = false;
+} else {
+  count.textContent = guests.length + (guests.length > 1 ? ' cartes' : ' carte') + ' — une par page A4';
+
+  const canvases = guests.map(name => {
+    const page = document.createElement('section');
+    page.className = 'page';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'canvas-wrap';
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    wrap.appendChild(canvas);
+
+    const actions = document.createElement('div');
+    actions.className = 'card-actions';
+    const caption = document.createElement('span');
+    caption.className = 'caption';
+    caption.textContent = name;
+    const dl = document.createElement('button');
+    dl.type = 'button';
+    dl.className = 'secondary';
+    dl.textContent = 'Télécharger l’image';
+    dl.addEventListener('click', () => downloadPNG(canvas, name));
+    actions.append(caption, dl);
+
+    page.append(wrap, actions);
+    pages.appendChild(page);
+    return canvas;
+  });
+
+  const bg = new Image();
+  const bgReady = new Promise((resolve, reject) => { bg.onload = resolve; bg.onerror = reject; });
+  bg.src = 'invitation-fond.jpg';
+
+  const fontReady = document.fonts && document.fonts.load
+    ? document.fonts.load("italic 600 65px 'Playfair Display'").catch(() => {})
+    : Promise.resolve();
+
+  Promise.all([bgReady, fontReady]).then(async () => {
+    for (let i = 0; i < canvases.length; i++) {
+      const ctx = canvases[i].getContext('2d');
+      ctx.drawImage(bg, 0, 0, W, H);
+      drawGuestName(ctx, guests[i]);
+      await new Promise(r => setTimeout(r, 0));
+    }
+    printBtn.hidden = false;
+  }).catch(() => {
+    count.textContent = 'Impossible de charger le fond de la carte — actualisez la page.';
+  });
+
+  printBtn.addEventListener('click', () => window.print());
+}
+</script>
+</body>
+</html>

@@ -1,5 +1,6 @@
-const CACHE_NAME = 'rsvp-dashboard-v1';
+const CACHE_NAME = 'rsvp-dashboard-v2';
 const ASSETS = ['./dashboard.html', './manifest.json', './icon-192.png', './icon-512.png'];
+const ASSET_PATHS = ASSETS.map(a => new URL(a, self.location).pathname);
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -17,12 +18,23 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
+// Réseau d'abord pour les fichiers de l'appli : les mises à jour arrivent tout de suite,
+// et la copie en cache ne sert que hors connexion. Le reste (données Apps Script, site
+// des invités, musique...) n'est pas géré ici et passe directement par le réseau.
 self.addEventListener('fetch', event => {
-  // Les données RSVP (Google Apps Script) ne sont jamais mises en cache : toujours à jour.
-  if (event.request.url.includes('script.google.com') || event.request.url.includes('script.googleusercontent.com')) {
+  const url = new URL(event.request.url);
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin || !ASSET_PATHS.includes(url.pathname)) {
     return;
   }
   event.respondWith(
-    caches.match(event.request).then(cached => cached || fetch(event.request))
+    fetch(event.request)
+      .then(res => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(url.pathname, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(url.pathname))
   );
 });

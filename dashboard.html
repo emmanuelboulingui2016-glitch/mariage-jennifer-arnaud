@@ -166,6 +166,16 @@
       <p id="manualStatus" class="text-xs text-center text-stone-400 mt-2"></p>
     </details>
 
+    <details class="card p-4 mb-6">
+      <summary class="cursor-pointer text-sm font-medium text-wine">👥 Ajouter plusieurs invités sans smartphone (cartes en lot)</summary>
+      <p class="text-xs text-stone-500 mt-2 mb-3">Un invité par ligne : <strong>Prénom Nom</strong> (le dernier mot est le nom), ou <strong>Couple NOM</strong> pour un couple. Tous sont ajoutés aux confirmés, puis leurs cartes s'ouvrent dans une page prête à imprimer.</p>
+      <textarea id="batchInput" rows="6" class="manual-input" placeholder="Marie Obiang&#10;Jean Pierre Ndong&#10;Couple BOULINGUI"></textarea>
+      <button id="batchGenerateBtn" class="w-full bg-wine text-white rounded-full py-2.5 text-sm font-medium mt-3">
+        Ajouter tous et préparer les cartes
+      </button>
+      <p id="batchStatus" class="text-xs text-center text-stone-400 mt-2"></p>
+    </details>
+
     <div class="flex gap-2 mb-3">
       <button type="button" class="filter-btn active flex-1 rounded-full px-3 py-1.5 text-xs"
         data-filter="all">Tous</button>
@@ -189,6 +199,37 @@
       class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 bg-wine text-white text-sm px-5 py-3 rounded-full shadow-lg">
       Installer sur l'écran d'accueil
     </button>
+  </div>
+
+  <div id="editModal" class="hidden fixed inset-0 z-40 bg-black/50 flex items-center justify-center p-4" role="dialog"
+    aria-modal="true" aria-labelledby="editTitle">
+    <div class="card p-5 w-full max-w-sm">
+      <h2 id="editTitle" class="serif text-xl mb-3">Modifier la réponse</h2>
+
+      <div class="flex gap-2 mb-3">
+        <button type="button" class="type-btn active flex-1 rounded-full px-3 py-1.5 text-xs" data-edit-type="individuel">Individuel</button>
+        <button type="button" class="type-btn flex-1 rounded-full px-3 py-1.5 text-xs" data-edit-type="couple">Couple</button>
+      </div>
+
+      <div id="editSoloFields" class="grid grid-cols-2 gap-2 mb-2">
+        <input id="editPrenom" class="manual-input" placeholder="Prénom">
+        <input id="editNom" class="manual-input" placeholder="Nom">
+      </div>
+      <div id="editCoupleFields" class="hidden mb-2">
+        <input id="editNomCouple" class="manual-input" placeholder="Nom du couple (ex. BOULINGUI)">
+      </div>
+
+      <select id="editPresence" class="manual-input mb-3">
+        <option value="Oui">Présent(s)</option>
+        <option value="Non">Absent(s)</option>
+      </select>
+
+      <p id="editStatus" class="text-xs text-center text-stone-500 mb-2 min-h-[1rem]"></p>
+      <div class="flex gap-2">
+        <button id="editCancel" type="button" class="flex-1 rounded-full border border-stone-300 py-2.5 text-sm">Annuler</button>
+        <button id="editSave" type="button" class="flex-1 bg-wine text-white rounded-full py-2.5 text-sm font-medium">Enregistrer</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -228,28 +269,33 @@
     let allResponses = [];
 
     function loadData() {
-      const callbackName = 'onDashboardData_' + Date.now();
-      window[callbackName] = function (data) {
-        allResponses = data.reponses || [];
-        document.getElementById('statTotal').textContent = data.total ?? 0;
-        document.getElementById('statOui').textContent = data.oui ?? 0;
-        document.getElementById('statNon').textContent = data.non ?? 0;
-        document.getElementById('statVisites').textContent = data.visites ?? 0;
-        document.getElementById('statScratchs').textContent = data.scratchs ?? 0;
-        document.getElementById('lastUpdate').textContent =
-          'Mis à jour à ' + new Date().toLocaleTimeString('fr-FR');
-        applyFilters();
-        delete window[callbackName];
-        script.remove();
-      };
+      return new Promise(resolve => {
+        const callbackName = 'onDashboardData_' + Date.now();
+        window[callbackName] = function (data) {
+          allResponses = data.reponses || [];
+          document.getElementById('statTotal').textContent = data.total ?? 0;
+          document.getElementById('statOui').textContent = data.oui ?? 0;
+          document.getElementById('statNon').textContent = data.non ?? 0;
+          document.getElementById('statVisites').textContent = data.visites ?? 0;
+          document.getElementById('statScratchs').textContent = data.scratchs ?? 0;
+          document.getElementById('lastUpdate').textContent =
+            'Mis à jour à ' + new Date().toLocaleTimeString('fr-FR');
+          applyFilters();
+          delete window[callbackName];
+          script.remove();
+          resolve(true);
+        };
 
-      const script = document.createElement('script');
-      script.src = RSVP_ENDPOINT + '?cle=' + encodeURIComponent(token) +
-        '&callback=' + callbackName + '&t=' + Date.now();
-      script.onerror = () => {
-        document.getElementById('lastUpdate').textContent = 'Échec du chargement — vérifiez la connexion.';
-      };
-      document.body.appendChild(script);
+        const script = document.createElement('script');
+        script.src = RSVP_ENDPOINT + '?cle=' + encodeURIComponent(token) +
+          '&callback=' + callbackName + '&t=' + Date.now();
+        script.onerror = () => {
+          document.getElementById('lastUpdate').textContent = 'Échec du chargement — vérifiez la connexion.';
+          script.remove();
+          resolve(false);
+        };
+        document.body.appendChild(script);
+      });
     }
 
     function render(list) {
@@ -287,12 +333,18 @@
             <div class="flex items-center gap-3">
               <span class="text-xs px-3 py-1 rounded-full ${badgeClass}">${escapeHtml(r.presence)}</span>
               <a href="${invitationUrl}" target="_blank" class="bg-wine text-white text-xs px-3 py-1 rounded-full whitespace-nowrap">
-        Invitation
-      </a>
+                Invitation
+              </a>
+            </div>
           </div>
-              </div>
           ${messageHtml}
+          <div class="flex justify-end gap-4 mt-2 text-[11px]">
+            <button type="button" data-act="edit" class="text-stone-500 underline hover:text-wine">Modifier</button>
+            <button type="button" data-act="delete" class="text-stone-400 underline hover:text-red-700">Supprimer</button>
+          </div>
         `;
+        row.querySelector('[data-act="edit"]').addEventListener('click', () => openEdit(r));
+        row.querySelector('[data-act="delete"]').addEventListener('click', () => deleteResponse(r));
         container.appendChild(row);
       });
     }
@@ -385,6 +437,186 @@
       }
     });
 
+    /* ===================== ENVOI VERS LE SERVEUR ===================== */
+    function postForm(payload) {
+      return fetch(RSVP_ENDPOINT, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: new URLSearchParams(payload).toString()
+      });
+    }
+
+    // La réponse du serveur n'est pas lisible depuis le navigateur (envoi "no-cors") :
+    // on recharge la liste jusqu'à voir le changement attendu.
+    async function waitForChange(isDone) {
+      for (let i = 0; i < 4; i++) {
+        await new Promise(r => setTimeout(r, i === 0 ? 1200 : 2000));
+        if (await loadData() && isDone()) return true;
+      }
+      return false;
+    }
+
+    function adminAction(action, r, extra = {}) {
+      return postForm({ action, cle: token, date: r.date, nom: r.nom, prenom: r.prenom, ...extra });
+    }
+
+    /* ===================== SUPPRIMER UNE RÉPONSE ===================== */
+    async function deleteResponse(r) {
+      const label = r.type === 'couple' ? `Couple ${r.nom}` : `${r.prenom} ${r.nom}`;
+      if (!confirm(`Supprimer définitivement la réponse de « ${label} » ?`)) return;
+      const info = document.getElementById('lastUpdate');
+      info.textContent = 'Suppression en cours...';
+      try {
+        await adminAction('delete', r);
+        const ok = await waitForChange(() =>
+          !allResponses.some(x => x.date === r.date && x.nom === r.nom && x.prenom === r.prenom));
+        info.textContent = ok
+          ? 'Réponse supprimée ✓'
+          : "Suppression non confirmée — actualisez (↻) pour vérifier.";
+      } catch (e) {
+        info.textContent = 'Échec de la suppression — réessayez.';
+      }
+    }
+
+    /* ===================== MODIFIER UNE RÉPONSE ===================== */
+    const editModal = document.getElementById('editModal');
+    const editStatus = document.getElementById('editStatus');
+    const editSave = document.getElementById('editSave');
+    let editing = null;
+    let editType = 'individuel';
+
+    function setEditType(t) {
+      editType = t;
+      document.querySelectorAll('[data-edit-type]').forEach(b => b.classList.toggle('active', b.dataset.editType === t));
+      document.getElementById('editSoloFields').classList.toggle('hidden', t === 'couple');
+      document.getElementById('editCoupleFields').classList.toggle('hidden', t !== 'couple');
+    }
+    document.querySelectorAll('[data-edit-type]').forEach(b =>
+      b.addEventListener('click', () => setEditType(b.dataset.editType)));
+
+    function openEdit(r) {
+      editing = r;
+      const isCouple = r.type === 'couple';
+      setEditType(isCouple ? 'couple' : 'individuel');
+      document.getElementById('editPrenom').value = isCouple ? '' : r.prenom;
+      document.getElementById('editNom').value = isCouple ? '' : r.nom;
+      document.getElementById('editNomCouple').value = isCouple ? r.nom : '';
+      document.getElementById('editPresence').value = r.presence === 'Non' ? 'Non' : 'Oui';
+      editStatus.textContent = '';
+      editSave.disabled = false;
+      editModal.classList.remove('hidden');
+    }
+
+    function closeEdit() {
+      editModal.classList.add('hidden');
+      editing = null;
+    }
+
+    document.getElementById('editCancel').addEventListener('click', closeEdit);
+    editModal.addEventListener('click', e => { if (e.target === editModal) closeEdit(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && editing) closeEdit(); });
+
+    editSave.addEventListener('click', async () => {
+      const isCouple = editType === 'couple';
+      const nom = document.getElementById(isCouple ? 'editNomCouple' : 'editNom').value.trim();
+      const prenom = isCouple ? 'Couple' : document.getElementById('editPrenom').value.trim();
+      const presence = document.getElementById('editPresence').value;
+      if (!nom || !prenom) {
+        editStatus.textContent = isCouple ? 'Nom du couple requis.' : 'Prénom et nom requis.';
+        return;
+      }
+
+      const target = editing;
+      editSave.disabled = true;
+      editStatus.textContent = 'Enregistrement...';
+      try {
+        await adminAction('update', target, {
+          newType: isCouple ? 'couple' : 'individuel',
+          newNom: nom, newPrenom: prenom, newPresence: presence
+        });
+        const ok = await waitForChange(() => allResponses.some(x =>
+          x.date === target.date && x.nom === nom && x.prenom === prenom && x.presence === presence));
+        if (ok) {
+          closeEdit();
+          document.getElementById('lastUpdate').textContent = 'Réponse modifiée ✓';
+        } else {
+          editStatus.textContent = 'Modification non confirmée — fermez puis actualisez (↻) pour vérifier.';
+          editSave.disabled = false;
+        }
+      } catch (e) {
+        editStatus.textContent = 'Échec de la modification — réessayez.';
+        editSave.disabled = false;
+      }
+    });
+
+    /* ===================== AJOUT EN LOT (invités sans smartphone) ===================== */
+    function parseBatch(text) {
+      const entries = [];
+      const ignored = [];
+      text.split('\n').map(l => l.trim().replace(/\s+/g, ' ')).filter(Boolean).forEach(line => {
+        const couple = line.match(/^couple(?:\s*:\s*|\s+)(.+)$/i);
+        if (couple) {
+          entries.push({ type: 'couple', prenom: 'Couple', nom: couple[1].trim() });
+          return;
+        }
+        const words = line.split(' ');
+        if (words.length < 2) { ignored.push(line); return; }
+        const nom = words.pop();
+        entries.push({ type: 'individuel', prenom: words.join(' '), nom });
+      });
+      return { entries, ignored };
+    }
+
+    document.getElementById('batchGenerateBtn').addEventListener('click', async () => {
+      const status = document.getElementById('batchStatus');
+      const btn = document.getElementById('batchGenerateBtn');
+      const { entries, ignored } = parseBatch(document.getElementById('batchInput').value);
+      if (!entries.length) {
+        status.textContent = 'Saisissez au moins un invité (Prénom Nom).';
+        return;
+      }
+
+      // Onglet ouvert tout de suite (pendant le clic) pour ne pas être bloqué par le navigateur
+      const win = window.open('', '_blank');
+      btn.disabled = true;
+
+      const key = e => `${e.type}|${e.prenom}|${e.nom}`.toLowerCase();
+      const known = new Set(allResponses.map(key));
+      const toAdd = entries.filter((e, i) => !known.has(key(e)) && entries.findIndex(x => key(x) === key(e)) === i);
+
+      try {
+        for (let i = 0; i < toAdd.length; i++) {
+          status.textContent = `Ajout ${i + 1}/${toAdd.length}...`;
+          await postForm({
+            type: toAdd[i].type, nom: toAdd[i].nom, prenom: toAdd[i].prenom,
+            presence: 'Oui', message: '', source: 'Ajout en lot depuis le dashboard'
+          });
+        }
+        localStorage.setItem('batchInvitations', JSON.stringify(entries.map(e => ({ prenom: e.prenom, nom: e.nom }))));
+
+        const skipped = entries.length - toAdd.length;
+        let msg = `${toAdd.length} ajouté(s)`;
+        if (skipped) msg += `, ${skipped} déjà présent(s)`;
+        if (ignored.length) msg += `, ${ignored.length} ligne(s) ignorée(s) (un seul mot)`;
+        status.textContent = msg + ' — ';
+        const link = document.createElement('a');
+        link.href = 'invitations-lot.html';
+        link.target = '_blank';
+        link.className = 'underline text-wine';
+        link.textContent = 'ouvrir les cartes';
+        status.append(link);
+
+        if (win) win.location.href = 'invitations-lot.html';
+        document.getElementById('batchInput').value = '';
+        loadData();
+      } catch (e) {
+        if (win) win.close();
+        status.textContent = "Échec de l'ajout — réessayez.";
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
     /* ===================== INSTALLATION PWA ===================== */
     let deferredPrompt = null;
     const installBtn = document.getElementById('installBtn');
@@ -404,6 +636,12 @@
     });
 
     if ('serviceWorker' in navigator) {
+      // Si une ancienne version de l'appli était déjà installée, on recharge une fois
+      // quand la nouvelle prend le relais, pour afficher tout de suite la dernière version.
+      const hadController = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (hadController) window.location.reload();
+      });
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('service-worker.js').catch(() => { });
       });
