@@ -159,6 +159,11 @@
     .hero-card {
       width:min(100%,900px); text-align:center; position:relative; z-index:1;
     }
+    .hero-couple-photo { margin:0 auto 28px; }
+    .hero-couple-photo img {
+      display:block; width:100%; height:auto; border-radius:16px;
+      box-shadow:0 18px 45px rgba(61,14,25,.16);
+    }
     .couple-photos {
       display:flex; justify-content:center; align-items:flex-end; gap:10px; margin:0 auto 28px;
     }
@@ -170,7 +175,7 @@
     .photo-frame:last-child { transform:rotate(4deg); }
     .photo-frame img { width:100%;height:100%;object-fit:cover; }
     .hero-kicker { letter-spacing:.32em;text-transform:uppercase;font-size:10px;color:#8b6b17;font-weight:600; }
-    .names { font-size:clamp(48px,14vw,100px); line-height:.9; margin:14px 0 12px; }
+    .names { font-size:clamp(44px,12.5vw,100px); line-height:1.05; margin:12px 0 -2px; padding:.08em .12em .22em; }
     .amp { color:var(--gold); font-size:.55em; }
     .hero-date { font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:#7a6b61; }
     .scroll-cue { margin-top:35px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#9b8b7d;animation:bob 1.8s infinite; }
@@ -207,6 +212,7 @@
     .time-box { background:#fff;border:1px solid rgba(91,13,27,.08);border-radius:18px;padding:18px 5px;box-shadow:0 12px 35px rgba(36,26,27,.06); }
     .time-num { font-family:'Playfair Display';font-size:clamp(28px,8vw,48px);color:var(--wine);font-weight:600; }
     .time-label { font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:#96877d;margin-top:3px; }
+    .countdown-date { font-family:'Playfair Display';font-size:clamp(24px,6.5vw,34px);font-weight:600;color:var(--wine);margin-top:26px;letter-spacing:.02em; }
 
     /* PROGRAM */
     .timeline { position:relative;margin-top:35px; }
@@ -216,9 +222,11 @@
       flex:0 0 55px;height:55px;border-radius:50%;display:grid;place-items:center;
       background:var(--cream);border:1px solid rgba(201,162,39,.6);color:var(--wine);font-size:22px;z-index:1;
     }
-    .event h3 { margin:0;font-family:'Playfair Display';font-size:21px; }
-    .event-time { font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#9a791a;font-weight:700; }
-    .event p { margin:5px 0 0;color:#786b64;font-size:13px;line-height:1.6; }
+    .event h3 { margin:2px 0 0;font-family:'Playfair Display';font-size:clamp(24px,6.5vw,30px);line-height:1.15; }
+    .event-time { font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:#8d6d18;font-weight:700; }
+    .event p { margin:8px 0 0;color:#5f544e;font-size:clamp(16px,4.3vw,18px);line-height:1.6; }
+    .geo-link { display:inline-flex;align-items:center;gap:9px;margin-top:12px;font-size:14px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--wine);text-decoration:underline;text-underline-offset:4px; }
+    .gmaps-icon { width:18px;height:25px;flex:none; }
 
     /* DRESS CODE */
     .dress-grid { display:grid;grid-template-columns:1fr;gap:14px;margin-top:30px; }
@@ -277,6 +285,7 @@
 
     footer { text-align:center;padding:45px 20px 70px;background:#21030a;color:#fff; }
     footer .script { color:var(--gold-light);font-size:38px; }
+    .footer-date { font-size:clamp(12px,3.6vw,16px);letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.78);margin:0; }
     .fade-up { opacity:0;transform:translateY(22px);transition:.8s ease; }
     .fade-up.visible { opacity:1;transform:none; }
 
@@ -291,6 +300,8 @@
 </head>
 
 <body>
+  <!-- Icône Google Maps (utilisée par les liens Géolocalisation) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><symbol id="gmaps-pin" viewBox="0 0 92.3 132.3"><path fill="#1a73e8" d="M60.2 2.2C55.8.8 51 0 46.1 0 32 0 19.3 6.4 10.8 16.5l21.8 18.3L60.2 2.2z"/><path fill="#ea4335" d="M10.8 16.5C4.1 24.5 0 34.9 0 46.1c0 8.7 1.7 15.7 4.6 22l28-33.3-21.8-18.3z"/><path fill="#4285f4" d="M46.2 28.5c9.8 0 17.7 7.9 17.7 17.7 0 4.3-1.6 8.3-4.2 11.4 0 0 13.9-16.6 27.5-32.7-5.6-10.8-15.3-19-27-22.7L32.6 34.8c3.3-3.8 8.1-6.3 13.6-6.3"/><path fill="#fbbc04" d="M46.2 63.8c-9.8 0-17.7-7.9-17.7-17.7 0-4.3 1.5-8.3 4.1-11.3l-28 33.3c4.8 10.6 12.8 19.2 21 29.9l34.1-40.5c-3.3 3.9-8.1 6.3-13.5 6.3"/><path fill="#34a853" d="M59.1 109.2c15.4-24.1 33.3-35 33.3-63 0-7.7-1.9-14.9-5.2-21.3L25.6 98c2.6 3.4 5.3 7.3 7.9 11.3 9.3 14.5 6.7 23.1 23 23.1 16.3 0 13.7-8.6 22.6-23.2z"/></symbol></svg>
 
   <!-- ===================== MUSIQUE DE FOND ===================== -->
   <audio id="bgMusic" loop preload="none">
@@ -318,7 +329,7 @@
   <header class="hero">
     <div class="hero-card">
       <div class="hero-couple-photo">
-        <img src="photo-couple.jpg" alt="Jennifer & Arnaud" width="900" height="1072" fetchpriority="high">
+        <img src="photo-couple.jpg" alt="Jennifer & Arnaud" width="1600" height="900" fetchpriority="high">
       </div>
       <div class="hero-kicker">Nous avons une merveilleuse nouvelle</div>
       <h1 class="names script gold-text">Jennifer <span class="amp">&amp;</span> Arnaud</h1>
@@ -334,15 +345,14 @@
     <section class="section bg-[#f3ecdf]">
       <div class="section-inner text-center fade-up">
         <div class="section-label">Une petite surprise</div>
-        <h2 class="section-title">Grattez pour découvrir la date</h2>
-        <div class="ornament">✦</div>
+        <div class="ornament mt-3">✦</div>
 
         <div class="scratch-wrap">
           <div class="scratch-card" id="scratchCard">
             <div class="scratch-content">
               <div>
                 <div class="text-[10px] uppercase tracking-[.25em] text-amber-100/60 mb-3">Notre grand jour</div>
-                <div id="scratchCoverText" class="scratch-date">✦ Grattez ici ✦</div>
+                <div id="scratchCoverText" class="scratch-date">✦ ✦ ✦</div>
                 <div id="scratchDate" class="scratch-date" style="display:none">13 Novembre<br>2026</div>
                 <div class="scratch-hint">La date apparaîtra lorsque vous aurez suffisamment gratté la surface dorée ✨</div>
               </div>
@@ -365,7 +375,7 @@
           <div class="time-box"><div id="minutes" class="time-num">00</div><div class="time-label">Minutes</div></div>
           <div class="time-box"><div id="seconds" class="time-num">00</div><div class="time-label">Secondes</div></div>
         </div>
-        <p class="text-[11px] text-stone-500 mt-5">13 novembre 2026</p>
+        <p class="countdown-date">13 novembre 2026</p>
       </div>
     </section>
 
@@ -385,7 +395,7 @@
               <div class="event-time">09:00 — 14:00</div>
               <h3>Mariage coutumier</h3>
               <p>Akébé — Célébration coutumière entourée de nos familles et de nos proches.</p>
-              <a href="https://www.google.com/maps/search/?api=1&query=Ak%C3%A9b%C3%A9%2C%20Libreville%2C%20Gabon" target="_blank" rel="noopener" class="inline-block mt-1 text-[10px] uppercase tracking-[.1em] text-wine underline underline-offset-2">📍 Voir sur la carte</a>
+              <a href="https://www.google.com/maps/search/?api=1&query=Ak%C3%A9b%C3%A9%2C%20Libreville%2C%20Gabon" target="_blank" rel="noopener" class="geo-link"><svg class="gmaps-icon" aria-hidden="true"><use href="#gmaps-pin"/></svg>Géolocalisation</a>
             </div>
           </article>
           <article class="event">
@@ -394,7 +404,7 @@
               <div class="event-time">16:00</div>
               <h3>Mariage civil</h3>
               <p>Mairie de Nombakélé — L’union civile de Jennifer &amp; Arnaud.</p>
-              <a href="https://www.google.com/maps/search/?api=1&query=Mairie%20de%20Nombak%C3%A9l%C3%A9%2C%20Libreville%2C%20Gabon" target="_blank" rel="noopener" class="inline-block mt-1 text-[10px] uppercase tracking-[.1em] text-wine underline underline-offset-2">📍 Voir sur la carte</a>
+              <a href="https://www.google.com/maps/search/?api=1&query=Mairie%20de%20Nombak%C3%A9l%C3%A9%2C%20Libreville%2C%20Gabon" target="_blank" rel="noopener" class="geo-link"><svg class="gmaps-icon" aria-hidden="true"><use href="#gmaps-pin"/></svg>Géolocalisation</a>
             </div>
           </article>
           <article class="event">
@@ -411,7 +421,7 @@
               <div class="event-time">19:00</div>
               <h3>Soirée</h3>
               <p>Salle de fête d’Okala — La réception commencera à 19h00 au plus tard.</p>
-              <a href="https://www.google.com/maps/search/?api=1&query=Salle%20de%20f%C3%AAte%20d%27Okala%2C%20Libreville%2C%20Gabon" target="_blank" rel="noopener" class="inline-block mt-1 text-[10px] uppercase tracking-[.1em] text-wine underline underline-offset-2">📍 Voir sur la carte</a>
+              <a href="https://www.google.com/maps/search/?api=1&query=Salle%20de%20f%C3%AAte%20d%27Okala%2C%20Libreville%2C%20Gabon" target="_blank" rel="noopener" class="geo-link"><svg class="gmaps-icon" aria-hidden="true"><use href="#gmaps-pin"/></svg>Géolocalisation</a>
             </div>
           </article>
         </div>
@@ -457,12 +467,12 @@
             Merci de confirmer votre présence afin que nous puissions préparer cette journée avec soin. Votre réponse sera transmise aux mariés.
           </p>
           <button id="rsvpOpen" class="rsvp-btn">Confirmer ma présence</button>
-          <div class="mt-3 flex items-center justify-center gap-1.5 w-full rounded-full border border-white/20 px-5 py-3 text-[10px] uppercase tracking-[.14em] text-white/80">
-            <span>Contacter</span>
+          <div class="mt-3 w-full rounded-[28px] border border-white/20 px-5 py-3 text-center text-[11px] leading-6 uppercase tracking-[.12em] text-white/80">
+            Contacter
             <a href="https://wa.me/24174061287" target="_blank" rel="noopener" class="underline underline-offset-2 hover:text-white">Arnaud</a>
-            <span>/</span>
+            /
             <a href="https://wa.me/24176382729" target="_blank" rel="noopener" class="underline underline-offset-2 hover:text-white">Jennifer</a>
-            <span>sur WhatsApp</span>
+            <span class="block sm:inline">sur WhatsApp</span>
           </div>
           <a href="galerie.html" class="mt-3 inline-flex items-center justify-center w-full rounded-full border border-white/20 px-5 py-3 text-[10px] uppercase tracking-[.14em] text-white/80 hover:bg-white/10">Voir les photos du mariage</a>
         </div>
@@ -474,7 +484,7 @@
   <footer>
     <div class="script">Jennifer &amp; Arnaud</div>
     <div class="gold-line max-w-[180px] mx-auto my-5 opacity-60"></div>
-    <p class="text-[9px] uppercase tracking-[.25em] text-white/40">13 Novembre 2026 · Avec amour</p>
+    <p class="footer-date">13 Novembre 2026 · Avec amour</p>
   </footer>
 
   <!-- ===================== MODAL RSVP ===================== -->
@@ -595,6 +605,7 @@
 
     function resizeScratch() {
       const rect = card.getBoundingClientRect();
+      scratchWidth = Math.round(rect.width);
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.floor(rect.width * ratio);
       canvas.height = Math.floor(rect.height * ratio);
@@ -611,10 +622,23 @@
       ctx.fillStyle = g;
       ctx.fillRect(0,0,rect.width,rect.height);
 
-      ctx.fillStyle = 'rgba(91,13,27,.10)';
-      ctx.font = '600 12px Montserrat';
+      // Phrase d'invitation dessinée sur la surface dorée : elle s'efface quand on gratte.
+      const maxTextWidth = rect.width - 48;
+      let fontSize = Math.min(34, rect.width / 12);
+      do {
+        ctx.font = `600 ${fontSize}px 'Playfair Display', serif`;
+        if (ctx.measureText('Grattez pour découvrir').width <= maxTextWidth) break;
+        fontSize -= 1;
+      } while (fontSize > 16);
+      ctx.fillStyle = '#5b0d1b';
       ctx.textAlign = 'center';
-      ctx.fillText('GRATTEZ ICI ✦',rect.width/2,rect.height/2);
+      ctx.textBaseline = 'middle';
+      const cy = rect.height / 2;
+      ctx.fillText('Grattez pour découvrir', rect.width / 2, cy - fontSize * 0.75);
+      ctx.fillText('la date', rect.width / 2, cy + fontSize * 0.55);
+      ctx.font = `600 ${Math.round(fontSize * 0.7)}px 'Playfair Display', serif`;
+      ctx.fillText('✦', rect.width / 2, cy + fontSize * 1.75);
+      ctx.textBaseline = 'alphabetic';
 
       ctx.globalCompositeOperation = 'destination-out';
     }
@@ -662,6 +686,7 @@
         canvas.style.transition = 'opacity .7s ease';
         canvas.style.opacity = '0';
         document.getElementById('scratchCoverText').style.display = 'none';
+        document.querySelector('.scratch-hint').style.display = 'none';
         const dateEl = document.getElementById('scratchDate');
         dateEl.style.display = 'block';
         dateEl.classList.add('revealed');
@@ -677,8 +702,18 @@
     window.addEventListener('pointerup', () => { drawing=false; lastPoint=null; });
     canvas.addEventListener('touchstart', e => e.preventDefault(), {passive:false});
     canvas.addEventListener('touchmove', scratch, {passive:false});
-    window.addEventListener('resize', () => { if (!revealed) resizeScratch(); });
-    requestAnimationFrame(resizeScratch);
+    // Sur téléphone, la barre d'adresse qui se cache déclenche "resize" : on ne recouvre
+    // la carte que si sa largeur change vraiment, pour ne pas effacer la progression.
+    let scratchWidth = 0;
+    window.addEventListener('resize', () => {
+      if (revealed) return;
+      const w = Math.round(card.getBoundingClientRect().width);
+      if (w !== scratchWidth) resizeScratch();
+    });
+    const scratchFont = document.fonts && document.fonts.load
+      ? document.fonts.load("600 30px 'Playfair Display'").catch(() => {})
+      : Promise.resolve();
+    scratchFont.then(() => requestAnimationFrame(resizeScratch));
 
     function launchConfetti() {
       if (typeof confetti !== 'function') return;
