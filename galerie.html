@@ -3,6 +3,7 @@
 <head>
   <script>if(location.hostname==='www.mariagejenniferarnaud.click'||(location.protocol==='http:'&&location.hostname==='mariagejenniferarnaud.click'))location.replace('https://mariagejenniferarnaud.click'+location.pathname+location.search+location.hash);</script>
 <meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow, noimageindex">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#5b0d1b">
 <meta name="description" content="Galerie photos et vidéos — Mariage de Jennifer & Arnaud — 13 Novembre 2026">
@@ -199,7 +200,9 @@
     document.addEventListener('visibilitychange', () => { if (!document.hidden) loadPhotos(); });
 
     function escapeHtml(str) {
-      return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return String(str || '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
     const lightbox = document.getElementById('lightbox');
