@@ -36,11 +36,11 @@
   }
   .stage{
     width:100%;
-    max-width:620px;
+    max-width:900px;
   }
   .canvas-wrap{
     width:100%;
-    aspect-ratio:1131/1600;
+    aspect-ratio:1800/1120;
     background:#fff;
     border-radius:4px;
     overflow:hidden;
@@ -95,7 +95,7 @@
     .stage{max-width:100%;}
     .canvas-wrap{box-shadow:none;border-radius:0;}
     .caption,.actions{display:none;}
-    @page{margin:0;size:A4 portrait;}
+    @page{margin:0;size:A4 landscape;}
   }
 </style>
 </head>
@@ -103,7 +103,7 @@
 
   <div class="stage">
     <div class="canvas-wrap">
-      <canvas id="invitationCanvas" width="1131" height="1600"></canvas>
+      <canvas id="invitationCanvas" width="1800" height="1120"></canvas>
     </div>
   </div>
 
@@ -116,7 +116,7 @@
 <script>
 const canvas = document.getElementById('invitationCanvas');
 const ctx = canvas.getContext('2d');
-const W = 1131, H = 1600;
+const W = 1800, H = 1120;
 
 const params = new URLSearchParams(window.location.search);
 const prenom = (params.get('prenom') || '').trim();
@@ -126,7 +126,7 @@ const guestName = [prenom, nom].filter(Boolean).join(' ') || 'Nom de l\u2019invi
 
 const bgImage = new Image();
 bgImage.crossOrigin = "anonymous";
-bgImage.src = 'invitation-fond.jpg';
+bgImage.src = 'billet-fond.jpg';
 
 let fontsReady = false, imageReady = false;
 document.fonts.ready.then(()=>{ fontsReady = true; maybeDraw(); });
@@ -145,23 +145,23 @@ function draw(){
 }
 
 function drawGuestName(){
-  const leftX = 157;
-  const baselineY = 780;
-  const maxWidth = 800;
+  const centerX = 990;
+  const baselineY = 598;
+  const maxWidth = 640;
 
-  let fontSize = 65;
-  ctx.textAlign = 'left';
+  let fontSize = 54;
+  ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
 
   do{
     ctx.font = `italic 600 ${fontSize}px 'Playfair Display'`;
-    const w = ctx.measureText(guestName).width;
+    const w = ctx.measureText(guestName.toUpperCase()).width;
     if(w <= maxWidth) break;
     fontSize -= 2;
   } while(fontSize > 28);
 
-  ctx.fillStyle = '#4a453f';
-  ctx.fillText(guestName.toUpperCase(), leftX, baselineY);
+  ctx.fillStyle = '#3a3330';
+  ctx.fillText(guestName.toUpperCase(), centerX, baselineY);
 }
 
 function downloadPNG(){
