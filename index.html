@@ -227,6 +227,10 @@
     .event p { margin:8px 0 0;color:#5f544e;font-size:clamp(16px,4.3vw,18px);line-height:1.6; }
     .geo-link { display:inline-flex;align-items:center;gap:9px;margin-top:12px;font-size:14px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--wine);text-decoration:underline;text-underline-offset:4px; }
     .gmaps-icon { width:18px;height:25px;flex:none; }
+    .steps { list-style:none;margin:16px 0 0;padding:0;border-top:1px solid rgba(201,162,39,.35); }
+    .steps li { display:grid;grid-template-columns:118px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid rgba(201,162,39,.2);font-size:clamp(15px,4vw,17px);color:#4f4540;line-height:1.45; }
+    .step-time { font-weight:700;color:#8d6d18;font-size:14px;letter-spacing:.04em;white-space:nowrap;padding-top:1px; }
+    @media (max-width:380px) { .steps li { grid-template-columns:1fr;gap:2px; } }
 
     /* DRESS CODE */
     .dress-grid { display:grid;grid-template-columns:1fr;gap:14px;margin-top:30px; }
@@ -390,38 +394,40 @@
 
         <div class="timeline">
           <article class="event">
-            <div class="event-icon">♡</div>
-            <div>
-              <div class="event-time">09:00 — 14:00</div>
-              <h3>Mariage coutumier</h3>
-              <p>Akébé — Célébration coutumière entourée de nos familles et de nos proches.</p>
-              <a href="https://www.google.com/maps/search/?api=1&query=Ak%C3%A9b%C3%A9%2C%20Libreville%2C%20Gabon" target="_blank" rel="noopener" class="geo-link"><svg class="gmaps-icon" aria-hidden="true"><use href="#gmaps-pin"/></svg>Géolocalisation</a>
-            </div>
-          </article>
-          <article class="event">
             <div class="event-icon">♔</div>
             <div>
-              <div class="event-time">16:00</div>
+              <div class="event-time">15:00 — 18:20</div>
               <h3>Mariage civil</h3>
               <p>Mairie de Nombakélé — L’union civile de Jennifer &amp; Arnaud.</p>
               <a href="https://www.google.com/maps/search/?api=1&query=Mairie%20de%20Nombak%C3%A9l%C3%A9%2C%20Libreville%2C%20Gabon" target="_blank" rel="noopener" class="geo-link"><svg class="gmaps-icon" aria-hidden="true"><use href="#gmaps-pin"/></svg>Géolocalisation</a>
-            </div>
-          </article>
-          <article class="event">
-            <div class="event-icon">✦</div>
-            <div>
-              <div class="event-time">17:00 — 18:00</div>
-              <h3>Tour de ville</h3>
-              <p>Un moment de partage et de célébration à travers Libreville.</p>
+              <ul class="steps">
+                <li><span class="step-time">15h00 – 15h20</span><span>Arrivée et installation des familles</span></li>
+                <li><span class="step-time">15h20 – 15h30</span><span>Arrivée et installation des témoins</span></li>
+                <li><span class="step-time">15h30 – 15h40</span><span>Arrivée et installation du marié</span></li>
+                <li><span class="step-time">15h40 – 15h50</span><span>Arrivée et installation de la mariée</span></li>
+                <li><span class="step-time">16h00</span><span>Arrivée du Maire, début de la cérémonie</span></li>
+                <li><span class="step-time">17h20 – 18h20</span><span>Tour de ville</span></li>
+              </ul>
             </div>
           </article>
           <article class="event">
             <div class="event-icon">♪</div>
             <div>
-              <div class="event-time">19:00</div>
+              <div class="event-time">18:00 — 00:00</div>
               <h3>Soirée</h3>
-              <p>Salle de fête d’Okala — La réception commencera à 19h00 au plus tard.</p>
-              <a href="https://www.google.com/maps/search/?api=1&query=Salle%20de%20f%C3%AAte%20d%27Okala%2C%20Libreville%2C%20Gabon" target="_blank" rel="noopener" class="geo-link"><svg class="gmaps-icon" aria-hidden="true"><use href="#gmaps-pin"/></svg>Géolocalisation</a>
+              <p>Salle de fête du camp de la FOPI — Bénédiction nuptiale et réception.</p>
+              <a href="https://www.google.com/maps/search/?api=1&query=Camp%20de%20la%20FOPI%2C%20Libreville%2C%20Gabon" target="_blank" rel="noopener" class="geo-link"><svg class="gmaps-icon" aria-hidden="true"><use href="#gmaps-pin"/></svg>Géolocalisation</a>
+              <ul class="steps">
+                <li><span class="step-time">18h00</span><span>Arrivée des invités</span></li>
+                <li><span class="step-time">19h00</span><span>Arrivée des mariés</span></li>
+                <li><span class="step-time">20h00</span><span>Bénédiction nuptiale</span></li>
+                <li><span class="step-time">20h50</span><span>Ouverture des buffets</span></li>
+                <li><span class="step-time">21h00 – 21h45</span><span>Prestations</span></li>
+                <li><span class="step-time">22h20</span><span>Entrée de la pièce montée</span></li>
+                <li><span class="step-time">22h50</span><span>Ouverture du bal</span></li>
+                <li><span class="step-time">23h10</span><span>Distribution des dragées</span></li>
+                <li><span class="step-time">00h00</span><span>Fin de la cérémonie</span></li>
+              </ul>
             </div>
           </article>
         </div>
