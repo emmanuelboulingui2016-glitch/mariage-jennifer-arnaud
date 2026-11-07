@@ -143,6 +143,24 @@
       👁 <span id="statVisites">–</span> visites · ✨ <span id="statScratchs">–</span> cartes grattées
     </p>
 
+    <details class="card p-4 mb-6" open>
+      <summary class="cursor-pointer text-sm font-medium text-wine">🔗 Liens d'invitation personnels (<span id="liensCount">0</span>)</summary>
+      <p class="text-xs text-stone-500 mt-2 mb-3">Un lien par invité ou par couple. Chaque lien ne permet qu'<strong>une seule inscription</strong> : s'il est transféré à quelqu'un d'autre après usage, il est refusé et ne montre rien de l'invité. Un nom par ligne, par exemple <strong>Marie Obiang</strong> ou <strong>Couple BOULINGUI</strong>.</p>
+      <textarea id="liensInput" rows="4" class="manual-input" placeholder="Marie Obiang&#10;Couple BOULINGUI"></textarea>
+      <button id="liensCreateBtn" class="w-full bg-wine text-white rounded-full py-2.5 text-sm font-medium mt-3">Créer les liens</button>
+      <p id="liensStatus" class="text-xs text-center text-stone-400 mt-2"></p>
+      <div class="flex gap-2 mt-4 mb-3">
+        <input id="liensSearch" type="text" placeholder="Rechercher un lien..."
+          class="flex-1 min-w-0 border border-stone-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-gold">
+        <select id="liensFilter" class="border border-stone-300 rounded-full px-3 py-2 text-xs bg-white">
+          <option value="all">Tous</option>
+          <option value="libre">Libres</option>
+          <option value="utilise">Utilisés</option>
+        </select>
+      </div>
+      <div id="liensList" class="space-y-2"></div>
+    </details>
+
     <details class="card p-4 mb-6">
       <summary class="cursor-pointer text-sm font-medium text-wine">➕ Ajouter un invité sans smartphone</summary>
       <p class="text-xs text-stone-500 mt-2 mb-3">Pour les invités qui ne recevront pas de lien (pas de téléphone/technologie). Les ajoute à la liste des confirmés et ouvre leur carte à imprimer.</p>
@@ -412,7 +430,7 @@
         nom: manualType === 'couple' ? nomCouple : nom,
         prenom: manualType === 'couple' ? 'Couple' : prenom,
         presence: 'Oui', message: '',
-        source: 'Ajout manuel depuis le dashboard'
+        source: 'Ajout manuel depuis le dashboard', cle: token
       };
 
       try {
@@ -591,7 +609,7 @@
           status.textContent = `Ajout ${i + 1}/${toAdd.length}...`;
           await postForm({
             type: toAdd[i].type, nom: toAdd[i].nom, prenom: toAdd[i].prenom,
-            presence: 'Oui', message: '', source: 'Ajout en lot depuis le dashboard'
+            presence: 'Oui', message: '', source: 'Ajout en lot depuis le dashboard', cle: token
           });
         }
         localStorage.setItem('batchInvitations', JSON.stringify(entries.map(e => ({ prenom: e.prenom, nom: e.nom }))));
@@ -618,6 +636,148 @@
         btn.disabled = false;
       }
     });
+
+
+    /* ===================== LIENS D'INVITATION PERSONNELS ===================== */
+    const SITE_URL = 'https://mariagejenniferarnaud.click/';
+    let allLiens = [];
+
+    function lienUrl(code) { return SITE_URL + '?invite=' + encodeURIComponent(code); }
+
+    function messageInvitation(l) {
+      return (l.invite ? 'Bonjour ' + l.invite + ',' : 'Bonjour,') +
+        '\n\nJennifer et Arnaud ont la joie de vous inviter à leur mariage, le vendredi 13 novembre 2026.' +
+        '\n\nVoici votre lien d\'invitation personnel pour confirmer votre présence :\n' + lienUrl(l.code) +
+        '\n\nCe lien vous est réservé et ne permet qu\'une seule inscription : merci de ne pas le transférer.';
+    }
+
+    async function copyText(text) {
+      try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) {}
+      ta.remove();
+      return ok;
+    }
+
+    function loadLiens() {
+      return new Promise(resolve => {
+        const cb = 'onLiens_' + Date.now();
+        const s = document.createElement('script');
+        window[cb] = data => {
+          if (data && Array.isArray(data.liens)) { allLiens = data.liens.reverse(); renderLiens(); }
+          delete window[cb]; s.remove(); resolve(true);
+        };
+        s.onerror = () => { s.remove(); resolve(false); };
+        s.src = RSVP_ENDPOINT + '?action=liens&cle=' + encodeURIComponent(token) + '&callback=' + cb + '&t=' + Date.now();
+        document.body.appendChild(s);
+      });
+    }
+
+    function renderLiens() {
+      const used = allLiens.filter(l => l.statut === 'utilise').length;
+      document.getElementById('liensCount').textContent = allLiens.length + ' · ' + used + ' utilisé' + (used > 1 ? 's' : '');
+      const q = document.getElementById('liensSearch').value.trim().toLowerCase();
+      const f = document.getElementById('liensFilter').value;
+      const list = allLiens.filter(l => (f === 'all' || l.statut === f) &&
+        (l.invite + ' ' + l.inscrit + ' ' + l.code).toLowerCase().includes(q));
+      const box = document.getElementById('liensList');
+      box.innerHTML = '';
+      if (!list.length) {
+        box.innerHTML = '<p class="text-center text-xs text-stone-400 py-4">Aucun lien.</p>';
+        return;
+      }
+      list.forEach(l => {
+        const row = document.createElement('div');
+        row.className = 'border border-stone-200 rounded-2xl p-3';
+        const used = l.statut === 'utilise';
+        const when = l.le ? new Date(l.le).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+        row.innerHTML = `
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <div class="text-sm font-medium truncate">${l.invite ? escapeHtml(l.invite) : '<span class="text-stone-400">Sans nom</span>'}</div>
+              <div class="text-[11px] text-stone-400 break-all">${escapeHtml(lienUrl(l.code))}</div>
+              ${used ? `<div class="text-[11px] text-wine mt-1">Inscrit : ${escapeHtml(l.inscrit)}${when ? ' · ' + escapeHtml(when) : ''}</div>` : ''}
+            </div>
+            <span class="shrink-0 text-xs px-3 py-1 rounded-full ${used ? 'badge-non' : 'badge-oui'}">${used ? 'Utilisé' : 'Libre'}</span>
+          </div>
+          <div class="flex flex-wrap justify-end gap-x-4 gap-y-1 mt-2 text-[11px]">
+            <button type="button" data-act="copy" class="text-stone-600 underline hover:text-wine">Copier le message</button>
+            <a data-act="wa" href="https://wa.me/?text=${encodeURIComponent(messageInvitation(l))}" target="_blank" rel="noopener" class="text-stone-600 underline hover:text-wine">WhatsApp</a>
+            ${used ? '<button type="button" data-act="free" class="text-stone-500 underline hover:text-wine">Libérer</button>' : ''}
+            <button type="button" data-act="del" class="text-stone-400 underline hover:text-red-700">Supprimer</button>
+          </div>`;
+        row.querySelector('[data-act="copy"]').addEventListener('click', async e => {
+          const ok = await copyText(messageInvitation(l));
+          e.target.textContent = ok ? 'Copié ✓' : 'Échec de la copie';
+          setTimeout(() => { e.target.textContent = 'Copier le message'; }, 2000);
+        });
+        const free = row.querySelector('[data-act="free"]');
+        if (free) free.addEventListener('click', () => {
+          if (!confirm('Libérer ce lien ? La réponse déjà enregistrée reste dans la liste, et le lien pourra servir à une nouvelle inscription.')) return;
+          lienAction({ action: 'libererLien', code: l.code }, 'Lien libéré ✓');
+        });
+        row.querySelector('[data-act="del"]').addEventListener('click', () => {
+          if (!confirm('Supprimer ce lien ? Il ne fonctionnera plus. Les réponses déjà enregistrées ne sont pas touchées.')) return;
+          lienAction({ action: 'supprimerLien', code: l.code }, 'Lien supprimé ✓');
+        });
+        box.appendChild(row);
+      });
+    }
+
+    async function postLiens(payload) {
+      const res = await fetch(RSVP_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: new URLSearchParams({ ...payload, cle: token }).toString()
+      });
+      const out = await res.json();
+      if (!out.success) throw new Error(out.error || 'Échec');
+      return out;
+    }
+
+    async function lienAction(payload, okMsg) {
+      const status = document.getElementById('liensStatus');
+      status.textContent = 'En cours...';
+      try {
+        await postLiens(payload);
+        status.textContent = okMsg;
+      } catch (e) {
+        status.textContent = 'Échec : ' + e.message;
+      }
+      loadLiens();
+    }
+
+    document.getElementById('liensCreateBtn').addEventListener('click', async () => {
+      const status = document.getElementById('liensStatus');
+      const btn = document.getElementById('liensCreateBtn');
+      const noms = document.getElementById('liensInput').value.split('\n')
+        .map(s => s.trim().replace(/\s+/g, ' ')).filter(Boolean);
+      if (!noms.length) { status.textContent = 'Saisissez au moins un nom.'; return; }
+      if (noms.length > 300) { status.textContent = '300 noms maximum à la fois.'; return; }
+      btn.disabled = true;
+      status.textContent = 'Création de ' + noms.length + ' lien(s)...';
+      try {
+        const out = await postLiens({ action: 'creerLiens', noms: noms.join('\n') });
+        status.textContent = out.crees.length + ' lien(s) créé(s) ✓ Envoyez chaque lien à son invité avec « WhatsApp » ou « Copier le message ».';
+        document.getElementById('liensInput').value = '';
+        await loadLiens();
+      } catch (e) {
+        status.textContent = 'Échec : ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('liensSearch').addEventListener('input', renderLiens);
+    document.getElementById('liensFilter').addEventListener('change', renderLiens);
+
+    if (token && RSVP_ENDPOINT) {
+      loadLiens();
+      setInterval(loadLiens, 60000);
+    }
 
     /* ===================== INSTALLATION PWA ===================== */
     let deferredPrompt = null;
