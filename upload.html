@@ -58,12 +58,12 @@
     <label id="dropzone" class="block text-center py-10 px-4 cursor-pointer mb-5">
       <div class="text-3xl mb-2">📷</div>
       <div class="text-sm text-stone-600">Toucher pour choisir des photos ou vidéos</div>
-      <div class="text-[11px] text-stone-400 mt-1">Photos : 15 Mo max · Vidéos : 25 Mo max</div>
+      <div class="text-[11px] text-stone-400 mt-1">Photos : 25 Mo max · Vidéos : 25 Mo max (qualité d’origine conservée)</div>
       <input id="fileInput" type="file" accept="image/*,video/*" multiple class="hidden">
     </label>
 
     <div class="card p-4 mb-5 text-xs text-stone-500 leading-5">
-      Pour une vidéo plus lourde que 25 Mo, ajoutez-la directement dans le
+      Pour une photo ou une vidéo plus lourde que 25 Mo, ajoutez-la directement dans le
       <a id="driveLink" href="#" target="_blank" rel="noopener" class="text-wine underline">dossier Google Drive</a>
       de la galerie — elle apparaîtra automatiquement sur le site, sans passer par ce formulaire.
     </div>
@@ -106,7 +106,7 @@
       app.classList.remove('hidden');
     }
 
-    const MAX_SIZE_IMAGE = 15 * 1024 * 1024;
+    const MAX_SIZE_IMAGE = 25 * 1024 * 1024;
     const MAX_SIZE_VIDEO = 25 * 1024 * 1024;
     let queue = [];
 

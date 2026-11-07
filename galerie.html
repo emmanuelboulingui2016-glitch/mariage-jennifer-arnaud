@@ -48,6 +48,15 @@
   #lightbox img, #lightbox iframe { max-width:100%; border-radius:8px; }
   #lightbox img { max-height:80vh; }
   #lightbox iframe { width:min(90vw,800px); height:min(70vh,450px); border:0; }
+  .live-badge { display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:999px; background:#5b0d1b; color:#fff; font-size:11px; letter-spacing:.16em; text-transform:uppercase; font-weight:700; }
+  .live-dot { width:8px; height:8px; border-radius:50%; background:#ff4d5e; box-shadow:0 0 0 0 rgba(255,77,94,.7); animation:livePulse 1.6s infinite; }
+  .live-time { font-weight:500; letter-spacing:.04em; text-transform:none; color:rgba(255,255,255,.75); }
+  .live-time:not(:empty)::before { content:'·'; margin:0 6px 0 2px; }
+  @keyframes livePulse { 0%{box-shadow:0 0 0 0 rgba(255,77,94,.7)} 70%{box-shadow:0 0 0 9px rgba(255,77,94,0)} 100%{box-shadow:0 0 0 0 rgba(255,77,94,0)} }
+  .photo-card.is-new { animation:newIn .7s ease both; outline:3px solid #c9a227; outline-offset:-3px; }
+  @keyframes newIn { from{opacity:0; transform:scale(.92)} to{opacity:1; transform:none} }
+  #liveToast { position:fixed; left:50%; bottom:22px; transform:translate(-50%,30px); opacity:0; pointer-events:none; z-index:70; background:#5b0d1b; color:#fff; padding:12px 20px; border-radius:999px; font-size:13px; font-weight:600; box-shadow:0 12px 30px rgba(0,0,0,.25); transition:all .35s ease; border:1px solid #c9a227; }
+  #liveToast.show { opacity:1; transform:translate(-50%,0); }
 </style>
 </head>
 <body class="min-h-screen">
@@ -56,8 +65,10 @@
     <div class="section-label">Jennifer &amp; Arnaud</div>
     <h1 class="script text-5xl text-wine mt-1">Nos souvenirs</h1>
     <p class="text-sm text-stone-500 mt-3 max-w-md mx-auto">
-      Retrouvez ici les photos et vidéos du mariage et téléchargez-les en haute qualité.
+      Suivez le mariage en direct : les photos et vidéos apparaissent ici au fil de la journée, sans recharger la page. Téléchargez-les en haute qualité.
     </p>
+    <div class="live-badge mt-4"><span class="live-dot"></span>En direct<span id="liveTime" class="live-time"></span></div>
+    <br>
     <a href="index.html" class="inline-block mt-4 text-[11px] uppercase tracking-[.18em] text-wine border-b border-wine/40 pb-0.5">← Retour à l'invitation</a>
   </header>
 
@@ -66,6 +77,8 @@
     <p id="empty" class="hidden text-center text-sm text-stone-400 py-16">Les photos seront publiées ici prochainement. Revenez bientôt !</p>
     <div id="grid" class="hidden grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
   </main>
+
+  <div id="liveToast" role="status" aria-live="polite"></div>
 
   <div id="lightbox">
     <button id="lightboxClose" class="absolute top-5 right-5 text-white text-3xl leading-none" aria-label="Fermer">×</button>
@@ -76,52 +89,114 @@
     /* Même URL Apps Script que index.html / dashboard.html */
     const RSVP_ENDPOINT = "https://script.google.com/macros/s/AKfycbzRszatTa7oJLFwPMaCKtkLHJQ3OlggStRKi0zANrCORirV7YXx2-FFzKIsC__Zu4ru/exec";
 
-    function loadPhotos() {
+    /* ===== Galerie en direct : actualisation automatique ===== */
+    const REFRESH_MS = 45000;          // toutes les 45 s, seulement si la page est à l'écran
+    const known = new Map();           // id -> carte affichée
+    let firstLoad = true, inFlight = false, timer = null;
+
+    function fetchPhotos() {
+      return new Promise((resolve, reject) => {
+        const callbackName = 'onPhotos_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
+        const script = document.createElement('script');
+        const cleanup = () => { delete window[callbackName]; script.remove(); clearTimeout(t); };
+        const t = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, 20000);
+        window[callbackName] = data => { cleanup(); resolve((data && data.photos) || []); };
+        script.onerror = () => { cleanup(); reject(new Error('network')); };
+        script.src = RSVP_ENDPOINT + '?action=photos&callback=' + callbackName + '&t=' + Date.now();
+        document.body.appendChild(script);
+      });
+    }
+
+    function photoTime(p) {
+      const v = p.date || p.dateCreation || p.cree || p.created || p.createdAt || p.modifie || '';
+      const t = Date.parse(v);
+      return isNaN(t) ? null : t;
+    }
+
+    function buildCard(p) {
+      const card = document.createElement('div');
+      card.className = 'photo-card';
+      const playBadge = p.type === 'video' ? '<div class="play-badge"><span>▶</span></div>' : '';
+      card.innerHTML = `
+        <img src="${p.apercu}" alt="${escapeHtml(p.nom)}" loading="lazy">
+        ${playBadge}
+        <a class="dl-btn" href="${p.telechargement}" download aria-label="Télécharger">⬇</a>
+      `;
+      card.querySelector('img').addEventListener('click', () => openLightbox(p));
+      return card;
+    }
+
+    function setUpdated() {
+      const d = new Date();
+      document.getElementById('liveTime').textContent =
+        'Mis à jour à ' + String(d.getHours()).padStart(2, '0') + 'h' + String(d.getMinutes()).padStart(2, '0');
+    }
+
+    function showToast(n) {
+      const toast = document.getElementById('liveToast');
+      toast.textContent = n > 1 ? n + ' nouvelles photos et vidéos' : '1 nouvelle photo ou vidéo';
+      toast.classList.add('show');
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => toast.classList.remove('show'), 4000);
+    }
+
+    async function loadPhotos() {
       if (!RSVP_ENDPOINT) {
         document.getElementById('loading').textContent =
           "Le développeur doit encore renseigner RSVP_ENDPOINT dans ce fichier.";
         return;
       }
-
-      const callbackName = 'onPhotos_' + Date.now();
-      window[callbackName] = function (data) {
-        document.getElementById('loading').classList.add('hidden');
-        renderPhotos(data.photos || []);
-        delete window[callbackName];
-        script.remove();
-      };
-
-      const script = document.createElement('script');
-      script.src = RSVP_ENDPOINT + '?action=photos&callback=' + callbackName + '&t=' + Date.now();
-      script.onerror = () => {
-        document.getElementById('loading').textContent = 'Échec du chargement — vérifiez la connexion.';
-      };
-      document.body.appendChild(script);
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        let photos = await fetchPhotos();
+        if (photos.length && photos.every(p => photoTime(p) !== null)) {
+          photos = photos.slice().sort((a, b) => photoTime(b) - photoTime(a));   // plus récentes en premier
+        }
+        renderPhotos(photos);
+        setUpdated();
+      } catch (e) {
+        if (firstLoad) document.getElementById('loading').textContent = 'Échec du chargement — nouvel essai dans quelques secondes…';
+      } finally {
+        inFlight = false;
+      }
     }
 
     function renderPhotos(photos) {
       const grid = document.getElementById('grid');
       const empty = document.getElementById('empty');
+      document.getElementById('loading').classList.add('hidden');
 
-      if (!photos.length) {
-        empty.classList.remove('hidden');
-        return;
+      const ids = new Set(photos.map(p => String(p.id)));
+      // Photos retirées du dossier par les organisateurs : on les enlève aussi de l'écran
+      known.forEach((card, id) => { if (!ids.has(id)) { card.remove(); known.delete(id); } });
+
+      const nouvelles = photos.filter(p => !known.has(String(p.id)));
+      if (firstLoad) {
+        nouvelles.forEach(p => { const c = buildCard(p); grid.appendChild(c); known.set(String(p.id), c); });
+      } else if (nouvelles.length) {
+        // Nouvelles photos : en haut de la galerie, avec une petite animation
+        nouvelles.slice().reverse().forEach(p => {
+          const c = buildCard(p);
+          c.classList.add('is-new');
+          setTimeout(() => c.classList.remove('is-new'), 10000);
+          grid.prepend(c);
+          known.set(String(p.id), c);
+        });
+        showToast(nouvelles.length);
       }
-      grid.classList.remove('hidden');
+      firstLoad = false;
 
-      photos.forEach(p => {
-        const card = document.createElement('div');
-        card.className = 'photo-card';
-        const playBadge = p.type === 'video' ? '<div class="play-badge"><span>▶</span></div>' : '';
-        card.innerHTML = `
-          <img src="${p.apercu}" alt="${escapeHtml(p.nom)}" loading="lazy">
-          ${playBadge}
-          <a class="dl-btn" href="${p.telechargement}" download aria-label="Télécharger">⬇</a>
-        `;
-        card.querySelector('img').addEventListener('click', () => openLightbox(p));
-        grid.appendChild(card);
-      });
+      const vide = known.size === 0;
+      empty.classList.toggle('hidden', !vide);
+      grid.classList.toggle('hidden', vide);
     }
+
+    function schedule() {
+      clearInterval(timer);
+      timer = setInterval(() => { if (!document.hidden) loadPhotos(); }, REFRESH_MS);
+    }
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) loadPhotos(); });
 
     function escapeHtml(str) {
       return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -132,13 +207,14 @@
     function openLightbox(p) {
       lightboxContent.innerHTML = p.type === 'video'
         ? `<iframe src="${p.lecture}" allow="autoplay" allowfullscreen></iframe>`
-        : `<img src="https://drive.google.com/thumbnail?id=${p.id}&sz=w1600" alt="${escapeHtml(p.nom)}">`;
+        : `<img src="https://drive.google.com/thumbnail?id=${p.id}&sz=w2400" alt="${escapeHtml(p.nom)}">`;
       lightbox.classList.add('show');
     }
     document.getElementById('lightboxClose').addEventListener('click', () => { lightbox.classList.remove('show'); lightboxContent.innerHTML = ''; });
     lightbox.addEventListener('click', e => { if (e.target === lightbox) { lightbox.classList.remove('show'); lightboxContent.innerHTML = ''; } });
 
     loadPhotos();
+    schedule();
   </script>
 </body>
 </html>
