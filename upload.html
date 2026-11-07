@@ -203,11 +203,22 @@
     sendBtn.addEventListener('click', async () => {
       sendBtn.disabled = true;
       const toSend = queue.filter(i => i.status !== 'ok');
-      for (let i = 0; i < toSend.length; i++) {
-        progress.textContent = `Envoi ${i + 1} / ${toSend.length}...`;
-        await uploadOne(toSend[i]);
+      // Envoi en rafale : 3 fichiers en même temps
+      let next = 0, done = 0;
+      progress.textContent = `Envoi 0 / ${toSend.length}...`;
+      async function worker() {
+        while (next < toSend.length) {
+          const item = toSend[next++];
+          await uploadOne(item);
+          done++;
+          progress.textContent = `Envoi ${done} / ${toSend.length}...`;
+        }
       }
-      progress.textContent = 'Terminé.';
+      await Promise.all([worker(), worker(), worker()]);
+      const refus = toSend.some(i => i.el && /refus/i.test(i.el.textContent));
+      progress.textContent = refus
+        ? 'Accès refusé : la clé enregistrée sur ce téléphone est fausse ou périmée. Rouvrez le lien privé d’envoi (avec ?cle=...).'
+        : 'Terminé.';
       sendBtn.disabled = false;
     });
   </script>
