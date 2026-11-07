@@ -144,17 +144,28 @@
     </p>
 
     <details class="card p-4 mb-6" open>
-      <summary class="cursor-pointer text-sm font-medium text-wine">🔗 Liens d'invitation personnels (<span id="liensCount">0</span>)</summary>
-      <p class="text-xs text-stone-500 mt-2 mb-3">Un lien par invité ou par couple. Chaque lien ne permet qu'<strong>une seule inscription</strong> : s'il est transféré à quelqu'un d'autre après usage, il est refusé et ne montre rien de l'invité. Un nom par ligne, par exemple <strong>Marie Obiang</strong> ou <strong>Couple BOULINGUI</strong>.</p>
-      <textarea id="liensInput" rows="4" class="manual-input" placeholder="Marie Obiang&#10;Couple BOULINGUI"></textarea>
-      <button id="liensCreateBtn" class="w-full bg-wine text-white rounded-full py-2.5 text-sm font-medium mt-3">Créer les liens</button>
+      <summary class="cursor-pointer text-sm font-medium text-wine">🔗 Liens d'invitation (<span id="liensCount">0</span>)</summary>
+      <p class="text-xs text-stone-500 mt-2 mb-3">Chaque invité reçoit <strong>un lien différent</strong> et s'inscrit lui-même avec son nom. Un lien ne permet qu'<strong>une seule inscription</strong> : transféré après usage, il est refusé et ne montre rien de l'invité. Vous n'avez aucun nom à saisir.</p>
+      <a id="liensSendBtn" href="#" target="_blank" rel="noopener" class="block text-center w-full bg-wine text-white rounded-full py-3 text-sm font-medium">📲 Envoyer un lien sur WhatsApp</a>
+      <button id="liensCopyNextBtn" type="button" class="w-full border border-wine text-wine rounded-full py-2.5 text-sm font-medium mt-2">Copier un lien pour un invité</button>
+      <p id="liensDispo" class="text-xs text-center text-stone-500 mt-2"></p>
+      <div class="flex gap-2 items-center mt-4">
+        <input id="liensNombre" type="number" min="1" max="300" value="50" class="w-20 border border-stone-300 rounded-full px-3 py-2 text-sm text-center">
+        <button id="liensBlankBtn" type="button" class="flex-1 bg-stone-800 text-white rounded-full py-2.5 text-sm font-medium">Créer des liens vierges</button>
+      </div>
+      <details class="mt-3">
+        <summary class="cursor-pointer text-xs text-stone-500">Créer des liens avec un nom (facultatif)</summary>
+        <textarea id="liensInput" rows="3" class="manual-input mt-2" placeholder="Marie Obiang&#10;Couple BOULINGUI"></textarea>
+        <button id="liensCreateBtn" class="w-full border border-stone-400 text-stone-700 rounded-full py-2 text-sm mt-2">Créer les liens nominatifs</button>
+      </details>
       <p id="liensStatus" class="text-xs text-center text-stone-400 mt-2"></p>
       <div class="flex gap-2 mt-4 mb-3">
         <input id="liensSearch" type="text" placeholder="Rechercher un lien..."
           class="flex-1 min-w-0 border border-stone-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-gold">
         <select id="liensFilter" class="border border-stone-300 rounded-full px-3 py-2 text-xs bg-white">
           <option value="all">Tous</option>
-          <option value="libre">Libres</option>
+          <option value="aenvoyer">À envoyer</option>
+          <option value="envoye">Envoyés</option>
           <option value="utilise">Utilisés</option>
         </select>
       </div>
@@ -676,12 +687,52 @@
       });
     }
 
+    function etatLien(l) {
+      if (l.statut === 'utilise') return 'utilise';
+      return l.envoye ? 'envoye' : 'aenvoyer';
+    }
+
+    // Prochain lien vierge jamais envoyé (le plus ancien d'abord)
+    function prochainLien() {
+      for (let i = allLiens.length - 1; i >= 0; i--) {
+        const l = allLiens[i];
+        if (!l.invite && etatLien(l) === 'aenvoyer') return l;
+      }
+      return null;
+    }
+
+    // Marque le lien comme envoyé tout de suite à l'écran, puis sur le serveur
+    function marquerEnvoye(l) {
+      if (l.envoye) return;
+      l.envoye = new Date().toISOString();
+      fetch(RSVP_ENDPOINT, {
+        method: 'POST', keepalive: true,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: new URLSearchParams({ action: 'marquerEnvoye', code: l.code, cle: token }).toString()
+      }).catch(() => {});
+      setTimeout(renderLiens, 50);
+    }
+
+    function majBoutonEnvoi() {
+      const btn = document.getElementById('liensSendBtn');
+      const dispo = allLiens.filter(l => !l.invite && etatLien(l) === 'aenvoyer').length;
+      const l = prochainLien();
+      btn.href = l ? 'https://wa.me/?text=' + encodeURIComponent(messageInvitation(l)) : '#';
+      btn.style.opacity = l ? '1' : '.5';
+      document.getElementById('liensCopyNextBtn').disabled = !l;
+      document.getElementById('liensDispo').textContent = l
+        ? dispo + ' lien' + (dispo > 1 ? 's' : '') + ' vierge' + (dispo > 1 ? 's' : '') + ' prêt' + (dispo > 1 ? 's' : '') + ' à envoyer. Chaque envoi prend un nouveau lien.'
+        : 'Plus aucun lien vierge à envoyer : créez-en ci-dessous.';
+    }
+
     function renderLiens() {
       const used = allLiens.filter(l => l.statut === 'utilise').length;
-      document.getElementById('liensCount').textContent = allLiens.length + ' · ' + used + ' utilisé' + (used > 1 ? 's' : '');
+      const sent = allLiens.filter(l => etatLien(l) !== 'aenvoyer').length;
+      document.getElementById('liensCount').textContent = allLiens.length + ' · ' + sent + ' envoyé' + (sent > 1 ? 's' : '') + ' · ' + used + ' inscrit' + (used > 1 ? 's' : '');
+      majBoutonEnvoi();
       const q = document.getElementById('liensSearch').value.trim().toLowerCase();
       const f = document.getElementById('liensFilter').value;
-      const list = allLiens.filter(l => (f === 'all' || l.statut === f) &&
+      const list = allLiens.filter(l => (f === 'all' || etatLien(l) === f) &&
         (l.invite + ' ' + l.inscrit + ' ' + l.code).toLowerCase().includes(q));
       const box = document.getElementById('liensList');
       box.innerHTML = '';
@@ -693,15 +744,16 @@
         const row = document.createElement('div');
         row.className = 'border border-stone-200 rounded-2xl p-3';
         const used = l.statut === 'utilise';
+        const etat = etatLien(l);
         const when = l.le ? new Date(l.le).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
         row.innerHTML = `
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
-              <div class="text-sm font-medium truncate">${l.invite ? escapeHtml(l.invite) : '<span class="text-stone-400">Sans nom</span>'}</div>
+              <div class="text-sm font-medium truncate">${l.invite ? escapeHtml(l.invite) : (used ? escapeHtml(l.inscrit) : '<span class="text-stone-400">Lien vierge</span>')}</div>
               <div class="text-[11px] text-stone-400 break-all">${escapeHtml(lienUrl(l.code))}</div>
               ${used ? `<div class="text-[11px] text-wine mt-1">Inscrit : ${escapeHtml(l.inscrit)}${when ? ' · ' + escapeHtml(when) : ''}</div>` : ''}
             </div>
-            <span class="shrink-0 text-xs px-3 py-1 rounded-full ${used ? 'badge-non' : 'badge-oui'}">${used ? 'Utilisé' : 'Libre'}</span>
+            <span class="shrink-0 text-xs px-3 py-1 rounded-full ${used ? 'badge-non' : 'badge-oui'}" style="${etat === 'envoye' ? 'background:#fef3c7;color:#92400e' : ''}">${used ? 'Utilisé' : (etat === 'envoye' ? 'Envoyé' : 'À envoyer')}</span>
           </div>
           <div class="flex flex-wrap justify-end gap-x-4 gap-y-1 mt-2 text-[11px]">
             <button type="button" data-act="copy" class="text-stone-600 underline hover:text-wine">Copier le message</button>
@@ -709,8 +761,10 @@
             ${used ? '<button type="button" data-act="free" class="text-stone-500 underline hover:text-wine">Libérer</button>' : ''}
             <button type="button" data-act="del" class="text-stone-400 underline hover:text-red-700">Supprimer</button>
           </div>`;
+        row.querySelector('[data-act="wa"]').addEventListener('click', () => marquerEnvoye(l));
         row.querySelector('[data-act="copy"]').addEventListener('click', async e => {
           const ok = await copyText(messageInvitation(l));
+          if (ok) marquerEnvoye(l);
           e.target.textContent = ok ? 'Copié ✓' : 'Échec de la copie';
           setTimeout(() => { e.target.textContent = 'Copier le message'; }, 2000);
         });
@@ -763,6 +817,42 @@
         const out = await postLiens({ action: 'creerLiens', noms: noms.join('\n') });
         status.textContent = out.crees.length + ' lien(s) créé(s) ✓ Envoyez chaque lien à son invité avec « WhatsApp » ou « Copier le message ».';
         document.getElementById('liensInput').value = '';
+        await loadLiens();
+      } catch (e) {
+        status.textContent = 'Échec : ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('liensSendBtn').addEventListener('click', e => {
+      const l = prochainLien();
+      if (!l) { e.preventDefault(); return; }
+      e.currentTarget.href = 'https://wa.me/?text=' + encodeURIComponent(messageInvitation(l));
+      marquerEnvoye(l);
+      document.getElementById('liensStatus').textContent = 'Lien …' + l.code.slice(-4) + ' envoyé. Le bouton prépare déjà le lien suivant.';
+    });
+
+    document.getElementById('liensCopyNextBtn').addEventListener('click', async () => {
+      const l = prochainLien();
+      if (!l) return;
+      const ok = await copyText(messageInvitation(l));
+      const status = document.getElementById('liensStatus');
+      if (!ok) { status.textContent = 'Échec de la copie.'; return; }
+      marquerEnvoye(l);
+      status.textContent = 'Message copié ✓ (lien …' + l.code.slice(-4) + '). Collez-le dans la discussion de l\'invité.';
+    });
+
+    document.getElementById('liensBlankBtn').addEventListener('click', async () => {
+      const status = document.getElementById('liensStatus');
+      const btn = document.getElementById('liensBlankBtn');
+      const n = parseInt(document.getElementById('liensNombre').value, 10);
+      if (!(n >= 1 && n <= 300)) { status.textContent = 'Entre 1 et 300 liens à la fois.'; return; }
+      btn.disabled = true;
+      status.textContent = 'Création de ' + n + ' lien(s) vierge(s)...';
+      try {
+        const out = await postLiens({ action: 'creerLiens', nombre: String(n) });
+        status.textContent = out.crees.length + ' lien(s) vierge(s) créé(s) ✓ Appuyez sur « Envoyer un lien sur WhatsApp » pour chaque invité.';
         await loadLiens();
       } catch (e) {
         status.textContent = 'Échec : ' + e.message;
