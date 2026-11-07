@@ -111,12 +111,27 @@ function drawGuestName(ctx, name) {
   ctx.fillText(name.toUpperCase(), centerX, baselineY);
 }
 
+
+function saveCanvas(canvas, filename){
+  return new Promise(resolve => {
+    canvas.toBlob(blob => {
+      if(!blob){ resolve(false); return; }
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+      resolve(true);
+    }, 'image/jpeg', 0.93);
+  });
+}
+
 function downloadPNG(canvas, name) {
   const safeName = name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '_');
-  const link = document.createElement('a');
-  link.download = `invitation_jennifer_arnaud_${safeName}.png`;
-  link.href = canvas.toDataURL('image/png', 1.0);
-  link.click();
+  saveCanvas(canvas, `billet_jennifer_arnaud_${safeName}.jpg`);
 }
 
 if (!guests.length) {
@@ -164,6 +179,8 @@ if (!guests.length) {
   Promise.all([bgReady, fontReady]).then(async () => {
     for (let i = 0; i < canvases.length; i++) {
       const ctx = canvases[i].getContext('2d');
+      ctx.fillStyle = '#fbfaf1';
+      ctx.fillRect(0, 0, W, H);
       ctx.drawImage(bg, 0, 0, W, H);
       drawGuestName(ctx, guests[i]);
       await new Promise(r => setTimeout(r, 0));

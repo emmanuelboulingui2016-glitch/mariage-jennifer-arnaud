@@ -81,6 +81,7 @@
     background:#5a0f1e;
     transform:translateY(-1px);
   }
+  button:disabled{opacity:.6;cursor:wait;transform:none;}
   button.secondary{
     background:transparent;
     color:var(--bordeaux);
@@ -109,7 +110,7 @@
 
 
   <div class="actions">
-    <button onclick="downloadPNG()">Télécharger l'image</button>
+    <button id="dlBtn" onclick="downloadPNG()" disabled>Préparation du billet…</button>
     <button class="secondary" onclick="window.print()">Imprimer / PDF</button>
   </div>
 
@@ -131,6 +132,7 @@ bgImage.src = 'billet-fond.jpg';
 let fontsReady = false, imageReady = false;
 document.fonts.ready.then(()=>{ fontsReady = true; maybeDraw(); });
 bgImage.onload = ()=>{ imageReady = true; maybeDraw(); };
+bgImage.onerror = ()=>{ const b = document.getElementById('dlBtn'); if(b) b.textContent = 'Erreur de chargement, actualisez la page'; };
 
 function maybeDraw(){
   if(fontsReady && imageReady) draw();
@@ -138,10 +140,16 @@ function maybeDraw(){
 // safety fallback in case one of the two events is slow to fire
 setTimeout(()=>{ if(imageReady) draw(); }, 600);
 
+let drawn = false;
 function draw(){
   ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#fbfaf1';
+  ctx.fillRect(0,0,W,H);
   ctx.drawImage(bgImage, 0, 0, W, H);
   drawGuestName();
+  drawn = true;
+  const b = document.getElementById('dlBtn');
+  if(b){ b.disabled = false; b.textContent = 'Télécharger mon billet'; }
 }
 
 function drawGuestName(){
@@ -164,12 +172,28 @@ function drawGuestName(){
   ctx.fillText(guestName.toUpperCase(), centerX, baselineY);
 }
 
-function downloadPNG(){
-  const link = document.createElement('a');
-  const safeName = (guestName || 'invite').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_');
-  link.download = `invitation_jennifer_arnaud_${safeName}.png`;
-  link.href = canvas.toDataURL('image/png', 1.0);
-  link.click();
+
+function saveCanvas(canvas, filename){
+  return new Promise(resolve => {
+    canvas.toBlob(blob => {
+      if(!blob){ resolve(false); return; }
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+      resolve(true);
+    }, 'image/jpeg', 0.93);
+  });
+}
+
+async function downloadPNG(){
+  if(!drawn){ if(imageReady) draw(); else return; }
+  const safeName = (guestName || 'invite').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]+/g,'_');
+  await saveCanvas(canvas, `billet_jennifer_arnaud_${safeName}.jpg`);
 }
 </script>
 </body>
