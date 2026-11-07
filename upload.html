@@ -44,7 +44,12 @@
     <div class="max-w-sm text-center text-white">
       <div class="text-4xl mb-3">🔒</div>
       <h1 class="serif text-2xl mb-2">Accès privé</h1>
-      <p class="text-sm text-white/70" id="lockMsg">Cet espace n'est accessible qu'avec le lien privé d'administration.</p>
+      <p class="text-sm text-white/70" id="lockMsg">Entrez le mot de passe des organisateurs pour envoyer des photos et vidéos.</p>
+      <form id="pwForm" class="mt-5 flex flex-col gap-3">
+        <input id="pwInput" type="password" autocomplete="current-password" placeholder="Mot de passe"
+          class="w-full rounded-full px-5 py-3 text-ink text-center outline-none" required>
+        <button type="submit" class="w-full rounded-full py-3 bg-gold text-wine font-semibold tracking-wide">Entrer</button>
+      </form>
     </div>
   </div>
 
@@ -92,19 +97,29 @@
       localStorage.setItem('uploadToken', urlToken);
       window.history.replaceState({}, '', window.location.pathname);
     }
-    const token = urlToken || localStorage.getItem('uploadToken') || '';
+    let token = urlToken || localStorage.getItem('uploadToken') || '';
 
     const lockScreen = document.getElementById('lockScreen');
     const app = document.getElementById('app');
 
-    if (!token || !RSVP_ENDPOINT) {
-      document.getElementById('lockMsg').textContent = !RSVP_ENDPOINT
-        ? "Le développeur doit encore renseigner RSVP_ENDPOINT dans ce fichier."
-        : "Cet espace n'est accessible qu'avec le lien privé d'administration.";
-    } else {
-      lockScreen.classList.add('hidden');
-      app.classList.remove('hidden');
+    function unlock() { lockScreen.classList.add('hidden'); app.classList.remove('hidden'); }
+    function lock(msg) {
+      token = '';
+      try { localStorage.removeItem('uploadToken'); } catch (e) {}
+      if (msg) document.getElementById('lockMsg').textContent = msg;
+      app.classList.add('hidden');
+      lockScreen.classList.remove('hidden');
+      document.getElementById('pwInput').value = '';
     }
+    document.getElementById('pwForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const v = document.getElementById('pwInput').value.trim();
+      if (!v) return;
+      token = v;
+      try { localStorage.setItem('uploadToken', v); } catch (err) {}
+      unlock();
+    });
+    if (token && RSVP_ENDPOINT) unlock();
 
     const MAX_SIZE_IMAGE = 25 * 1024 * 1024;
     const MAX_SIZE_VIDEO = 25 * 1024 * 1024;
@@ -216,9 +231,8 @@
       }
       await Promise.all([worker(), worker(), worker()]);
       const refus = toSend.some(i => i.el && /refus/i.test(i.el.textContent));
-      progress.textContent = refus
-        ? 'Accès refusé : la clé enregistrée sur ce téléphone est fausse ou périmée. Rouvrez le lien privé d’envoi (avec ?cle=...).'
-        : 'Terminé.';
+      progress.textContent = 'Terminé.';
+      if (refus) lock('Mot de passe incorrect. Réessayez, vos photos restent sélectionnées.');
       sendBtn.disabled = false;
     });
   </script>
