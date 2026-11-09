@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#5b0d1b">
   <meta name="description" content="Dashboard privé — confirmations de présence — Jennifer & Arnaud">
   <meta name="robots" content="noindex, nofollow, noimageindex">
-  <title>Dashboard RSVP — Jennifer & Arnaud</title>
+  <title>Tableau de bord d'Arnaud — Mariage Jennifer & Arnaud</title>
 
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon-192.png">
@@ -68,6 +68,8 @@
       background: #5b0d1b;
     }
 
+    .vue-btn { color: #78716c; }
+    .vue-btn.active { background: #5b0d1b; color: #fff; }
     .filter-btn {
       border: 1px solid #d6c9a8;
       color: #786b64;
@@ -125,9 +127,15 @@
   <div id="app" class="hidden max-w-2xl mx-auto px-4 pb-16 pt-8">
     <header class="text-center mb-6">
       <div class="text-xs tracking-[.2em] uppercase text-gold">Jennifer &amp; Arnaud</div>
-      <h1 class="serif text-3xl mt-1">Confirmations RSVP</h1>
+      <h1 id="titreTableau" class="serif text-3xl mt-1">Tableau de bord</h1>
       <p class="text-xs text-stone-500 mt-1">13 Novembre 2026</p>
     </header>
+
+    <div class="flex gap-2 mb-5 p-1 rounded-full bg-white border border-stone-200">
+      <button type="button" class="vue-btn active flex-1 rounded-full px-3 py-2 text-xs font-medium" data-vue="moi" id="vueMoiBtn">Mes invités</button>
+      <button type="button" class="vue-btn flex-1 rounded-full px-3 py-2 text-xs font-medium" data-vue="tout">Données complètes</button>
+    </div>
+    <p id="repartition" class="hidden text-center text-xs text-stone-500 -mt-2 mb-4"></p>
 
     <div class="grid grid-cols-3 gap-3 mb-6">
       <div class="card p-4 text-center">
@@ -148,7 +156,7 @@
       👁 <span id="statVisites">–</span> visites · ✨ <span id="statScratchs">–</span> cartes grattées
     </p>
 
-    <details class="card p-4 mb-6" open>
+    <details class="card p-4 mb-6 vue-moi" open>
       <summary class="cursor-pointer text-sm font-medium text-wine">🔗 Liens d'invitation (<span id="liensCount">0</span>)</summary>
       <p class="text-xs text-stone-500 mt-2 mb-3">Chaque invité reçoit <strong>un lien différent</strong> et s'inscrit lui-même avec son nom. Un lien ne permet qu'<strong>une seule inscription</strong> : transféré après usage, il est refusé et ne montre rien de l'invité. Vous n'avez aucun nom à saisir.</p>
       <a id="liensSendBtn" href="#" target="_blank" rel="noopener" class="block text-center w-full bg-wine text-white rounded-full py-3 text-sm font-medium">📲 Envoyer un lien sur WhatsApp</a>
@@ -177,7 +185,7 @@
       <div id="liensList" class="space-y-2"></div>
     </details>
 
-    <details class="card p-4 mb-6">
+    <details class="card p-4 mb-6 vue-moi">
       <summary class="cursor-pointer text-sm font-medium text-wine">➕ Ajouter un invité sans smartphone</summary>
       <p class="text-xs text-stone-500 mt-2 mb-3">Pour les invités qui ne recevront pas de lien (pas de téléphone/technologie). Les ajoute à la liste des confirmés et ouvre leur carte à imprimer.</p>
 
@@ -201,7 +209,7 @@
       <p id="manualStatus" class="text-xs text-center text-stone-400 mt-2"></p>
     </details>
 
-    <details class="card p-4 mb-6">
+    <details class="card p-4 mb-6 vue-moi">
       <summary class="cursor-pointer text-sm font-medium text-wine">👥 Ajouter plusieurs invités sans smartphone (cartes en lot)</summary>
       <p class="text-xs text-stone-500 mt-2 mb-3">Un invité par ligne : <strong>Prénom Nom</strong> (le dernier mot est le nom), ou <strong>Couple NOM</strong> pour un couple. Tous sont ajoutés aux confirmés, puis leurs cartes s'ouvrent dans une page prête à imprimer.</p>
       <textarea id="batchInput" rows="6" class="manual-input" placeholder="Marie Obiang&#10;Jean Pierre Ndong&#10;Couple BOULINGUI"></textarea>
@@ -271,6 +279,18 @@
     /* ===================== CONFIGURATION =====================
        Même URL Apps Script (/exec) que dans index.html — coller après déploiement.
     */
+    /* ===================== CÔTÉ DE CE TABLEAU =====================
+       dashboard.html = tableau d'Arnaud. dashboard-jennifer.html est généré depuis ce fichier
+       (seules la ligne COTE, le titre et le manifest changent) : ne modifiez que dashboard.html.
+    */
+    const COTE = 'arnaud';
+    const NOM_COTE = { arnaud: 'Arnaud', jennifer: 'Jennifer' };
+    const AUTRE = COTE === 'arnaud' ? 'jennifer' : 'arnaud';
+    const TITRE = COTE === 'arnaud' ? "Tableau de bord d'Arnaud" : 'Tableau de bord de Jennifer';
+    document.getElementById('titreTableau').textContent = TITRE;
+    document.title = TITRE + ' — Mariage Jennifer & Arnaud';
+    let vue = 'moi';
+
     const RSVP_ENDPOINT = "https://script.google.com/macros/s/AKfycbzRszatTa7oJLFwPMaCKtkLHJQ3OlggStRKi0zANrCORirV7YXx2-FFzKIsC__Zu4ru/exec";
 
     /* ===================== JETON D'ACCÈS =====================
@@ -338,9 +358,7 @@
         const callbackName = 'onDashboardData_' + Date.now();
         window[callbackName] = function (data) {
           allResponses = data.reponses || [];
-          document.getElementById('statTotal').textContent = data.total ?? 0;
-          document.getElementById('statOui').textContent = data.oui ?? 0;
-          document.getElementById('statNon').textContent = data.non ?? 0;
+          majStats();
           document.getElementById('statVisites').textContent = data.visites ?? 0;
           document.getElementById('statScratchs').textContent = data.scratchs ?? 0;
           document.getElementById('lastUpdate').textContent =
@@ -403,7 +421,7 @@
         row.innerHTML = `
           <div class="flex items-center justify-between gap-3">
             <div>
-              <div class="text-sm font-medium">${displayName}</div>
+              <div class="text-sm font-medium">${displayName} ${vue === 'tout' ? badgeCote(r.cote) : ''}</div>
               <div class="text-[11px] text-stone-400">${dateStr}</div>
             </div>
             <div class="flex items-center gap-3">
@@ -433,9 +451,45 @@
 
     let currentFilter = 'all';
 
+    function reponsesVue() {
+      return vue === 'tout' ? allResponses : allResponses.filter(r => r.cote === COTE);
+    }
+
+    function majStats() {
+      const liste = reponsesVue();
+      document.getElementById('statTotal').textContent = liste.length;
+      document.getElementById('statOui').textContent = liste.filter(r => r.presence === 'Oui').length;
+      document.getElementById('statNon').textContent = liste.filter(r => r.presence === 'Non').length;
+      const rep = document.getElementById('repartition');
+      if (vue === 'tout') {
+        const n = c => allResponses.filter(r => r.cote === c && r.presence === 'Oui').length;
+        const sans = allResponses.filter(r => !r.cote).length;
+        rep.textContent = 'Présents côté Jennifer : ' + n('jennifer') + ' · côté Arnaud : ' + n('arnaud') +
+          (sans ? ' · ' + sans + ' réponse(s) sans côté' : '');
+        rep.classList.remove('hidden');
+      } else {
+        rep.classList.add('hidden');
+      }
+    }
+
+    function badgeCote(c) {
+      if (!c) return '<span class="inline-block whitespace-nowrap align-middle text-[10px] px-2 py-0.5 rounded-full bg-stone-100 text-stone-500">Sans côté</span>';
+      const style = c === 'jennifer' ? 'background:#fce7f3;color:#9d174d' : 'background:#e0e7ff;color:#3730a3';
+      return '<span class="inline-block whitespace-nowrap align-middle text-[10px] px-2 py-0.5 rounded-full" style="' + style + '">Côté ' + NOM_COTE[c] + '</span>';
+    }
+
+    function changerVue(v) {
+      vue = v;
+      document.querySelectorAll('.vue-btn').forEach(b => b.classList.toggle('active', b.dataset.vue === v));
+      document.querySelectorAll('.vue-moi').forEach(el => el.classList.toggle('hidden', v === 'tout'));
+      majStats();
+      applyFilters();
+    }
+    document.querySelectorAll('.vue-btn').forEach(b => b.addEventListener('click', () => changerVue(b.dataset.vue)));
+
     function applyFilters() {
       const q = document.getElementById('search').value.trim().toLowerCase();
-      render(allResponses.filter(r =>
+      render(reponsesVue().filter(r =>
         (currentFilter === 'all' || r.presence === currentFilter) &&
         (r.nom + ' ' + r.prenom).toLowerCase().includes(q)
       ));
@@ -487,7 +541,7 @@
         nom: manualType === 'couple' ? nomCouple : nom,
         prenom: manualType === 'couple' ? 'Couple' : prenom,
         presence: 'Oui', message: '',
-        source: 'Ajout manuel depuis le dashboard', cle: token
+        source: 'Ajout manuel depuis le dashboard', cle: token, cote: COTE
       };
 
       try {
@@ -666,7 +720,7 @@
           status.textContent = `Ajout ${i + 1}/${toAdd.length}...`;
           await postForm({
             type: toAdd[i].type, nom: toAdd[i].nom, prenom: toAdd[i].prenom,
-            presence: 'Oui', message: '', source: 'Ajout en lot depuis le dashboard', cle: token
+            presence: 'Oui', message: '', source: 'Ajout en lot depuis le dashboard', cle: token, cote: COTE
           });
         }
         localStorage.setItem('batchInvitations', JSON.stringify(entries.map(e => ({ prenom: e.prenom, nom: e.nom }))));
@@ -733,7 +787,7 @@
         const cb = 'onLiens_' + Date.now();
         const s = document.createElement('script');
         window[cb] = data => {
-          if (data && Array.isArray(data.liens)) { allLiens = data.liens.reverse(); renderLiens(); }
+          if (data && Array.isArray(data.liens)) { allLiens = data.liens.reverse().filter(l => l.cote === COTE || !l.cote); renderLiens(); }
           delete window[cb]; s.remove(); resolve(true);
         };
         s.onerror = () => { s.remove(); resolve(false); };
@@ -751,7 +805,7 @@
     function prochainLien() {
       for (let i = allLiens.length - 1; i >= 0; i--) {
         const l = allLiens[i];
-        if (!l.invite && etatLien(l) === 'aenvoyer') return l;
+        if (!l.invite && l.cote === COTE && etatLien(l) === 'aenvoyer') return l;
       }
       return null;
     }
@@ -770,7 +824,7 @@
 
     function majBoutonEnvoi() {
       const btn = document.getElementById('liensSendBtn');
-      const dispo = allLiens.filter(l => !l.invite && etatLien(l) === 'aenvoyer').length;
+      const dispo = allLiens.filter(l => !l.invite && l.cote === COTE && etatLien(l) === 'aenvoyer').length;
       const l = prochainLien();
       btn.href = l ? 'https://wa.me/?text=' + encodeURIComponent(messageInvitation(l)) : '#';
       btn.style.opacity = l ? '1' : '.5';
@@ -807,6 +861,7 @@
               <div class="text-sm font-medium truncate">${l.invite ? escapeHtml(l.invite) : (used ? escapeHtml(l.inscrit) : '<span class="text-stone-400">Lien vierge</span>')}</div>
               <div class="text-[11px] text-stone-400 break-all">${escapeHtml(lienUrl(l.code))}</div>
               ${used ? `<div class="text-[11px] text-wine mt-1">Inscrit : ${escapeHtml(l.inscrit)}${when ? ' · ' + escapeHtml(when) : ''}</div>` : ''}
+              ${!l.cote ? `<div class="text-[11px] mt-1 text-amber-700">Lien créé avant la séparation des tableaux. <button type="button" data-act="attr" class="underline font-medium">C'est un de mes invités</button></div>` : ''}
             </div>
             <span class="shrink-0 text-xs px-3 py-1 rounded-full ${used ? 'badge-non' : 'badge-oui'}" style="${etat === 'envoye' ? 'background:#fef3c7;color:#92400e' : ''}">${used ? 'Utilisé' : (etat === 'envoye' ? 'Envoyé' : 'À envoyer')}</span>
           </div>
@@ -823,6 +878,8 @@
           e.target.textContent = ok ? 'Copié ✓' : 'Échec de la copie';
           setTimeout(() => { e.target.textContent = 'Copier le message'; }, 2000);
         });
+        const attr = row.querySelector('[data-act="attr"]');
+        if (attr) attr.addEventListener('click', () => lienAction({ action: 'attribuerLien', code: l.code, cote: COTE }, 'Lien ajouté à vos invités ✓'));
         const free = row.querySelector('[data-act="free"]');
         if (free) free.addEventListener('click', () => {
           if (!confirm('Libérer ce lien ? La réponse déjà enregistrée reste dans la liste, et le lien pourra servir à une nouvelle inscription.')) return;
@@ -869,7 +926,7 @@
       btn.disabled = true;
       status.textContent = 'Création de ' + noms.length + ' lien(s)...';
       try {
-        const out = await postLiens({ action: 'creerLiens', noms: noms.join('\n') });
+        const out = await postLiens({ action: 'creerLiens', noms: noms.join('\n'), cote: COTE });
         status.textContent = out.crees.length + ' lien(s) créé(s) ✓ Envoyez chaque lien à son invité avec « WhatsApp » ou « Copier le message ».';
         document.getElementById('liensInput').value = '';
         await loadLiens();
@@ -906,7 +963,7 @@
       btn.disabled = true;
       status.textContent = 'Création de ' + n + ' lien(s) vierge(s)...';
       try {
-        const out = await postLiens({ action: 'creerLiens', nombre: String(n) });
+        const out = await postLiens({ action: 'creerLiens', nombre: String(n), cote: COTE });
         status.textContent = out.crees.length + ' lien(s) vierge(s) créé(s) ✓ Appuyez sur « Envoyer un lien sur WhatsApp » pour chaque invité.';
         await loadLiens();
       } catch (e) {

@@ -1,7 +1,7 @@
 {
   "id": "./dashboard.html",
-  "name": "Dashboard RSVP — Jennifer & Arnaud",
-  "short_name": "RSVP J&A",
+  "name": "Tableau de bord d'Arnaud — Mariage J&A",
+  "short_name": "Arnaud J&A",
   "description": "Suivi en direct des confirmations de présence pour le mariage de Jennifer & Arnaud",
   "start_url": "./dashboard.html",
   "scope": "./dashboard.html",

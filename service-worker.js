@@ -1,5 +1,6 @@
-const CACHE_NAME = 'rsvp-dashboard-v3';
+const CACHE_NAME = 'rsvp-dashboard-v4';
 const ASSETS = ['./dashboard.html', './manifest.json', './icon-192.png', './icon-512.png',
+  './dashboard-jennifer.html', './manifest-jennifer.json',
   './upload.html', './manifest-photos.json', './icon-photos-192.png', './icon-photos-512.png'];
 const ASSET_PATHS = ASSETS.map(a => new URL(a, self.location).pathname);
 
