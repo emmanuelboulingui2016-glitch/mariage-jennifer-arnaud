@@ -4,7 +4,7 @@
   "short_name": "RSVP J&A",
   "description": "Suivi en direct des confirmations de présence pour le mariage de Jennifer & Arnaud",
   "start_url": "./dashboard.html",
-  "scope": "./",
+  "scope": "./dashboard.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#fbf7ef",

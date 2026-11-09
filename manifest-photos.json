@@ -4,7 +4,7 @@
   "short_name": "Photos J&A",
   "description": "Envoi des photos et vidéos du mariage de Jennifer & Arnaud vers la galerie",
   "start_url": "./upload.html",
-  "scope": "./",
+  "scope": "./upload.html",
   "display": "standalone",
   "background_color": "#fbf7ef",
   "theme_color": "#5b0d1b",
