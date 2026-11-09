@@ -114,6 +114,11 @@
       <div class="text-4xl mb-3">🔒</div>
       <h1 class="serif text-2xl text-white mb-2">Accès privé</h1>
       <p class="text-sm text-white/70">Ce dashboard n'est accessible qu'avec le lien privé transmis aux mariés.</p>
+      <form id="pwForm" class="mt-5 space-y-3">
+        <input id="pwInput" type="password" autocomplete="current-password" placeholder="Mot de passe"
+          class="w-full rounded-full px-5 py-3 text-sm text-stone-800 bg-white focus:outline-none">
+        <button type="submit" class="w-full rounded-full py-3 text-sm font-medium bg-white/15 text-white border border-white/40">Ouvrir le tableau de bord</button>
+      </form>
     </div>
   </div>
 
@@ -285,10 +290,40 @@
     const lockScreen = document.getElementById('lockScreen');
     const app = document.getElementById('app');
 
+    document.getElementById('pwForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const v = document.getElementById('pwInput').value.trim();
+      if (!v) return;
+      try { localStorage.setItem('dashboardToken', v); } catch (err) {}
+      window.location.replace(window.location.pathname);
+    });
+
+    // Mot de passe refusé par le serveur (changé ou faux) : on l'oublie et on le redemande
+    let dejaCharge = false;
+    function serveurJoignable() {
+      return new Promise(resolve => {
+        const cb = 'onPing_' + Date.now();
+        const sc = document.createElement('script');
+        const fin = ok => { delete window[cb]; sc.remove(); resolve(ok); };
+        window[cb] = () => fin(true);
+        sc.onerror = () => fin(false);
+        sc.src = RSVP_ENDPOINT + '?action=lien&code=verif&callback=' + cb + '&t=' + Date.now();
+        document.body.appendChild(sc);
+      });
+    }
+    function accesRefuse() {
+      if (dejaCharge) return;
+      try { localStorage.removeItem('dashboardToken'); } catch (err) {}
+      app.classList.add('hidden');
+      lockScreen.classList.remove('hidden');
+      lockScreen.querySelector('p').textContent = 'Mot de passe incorrect ou modifié. Entrez le mot de passe du tableau de bord.';
+      document.getElementById('pwInput').focus();
+    }
+
     if (!token || !RSVP_ENDPOINT) {
       lockScreen.querySelector('p').textContent = !RSVP_ENDPOINT
         ? "Le développeur doit encore renseigner RSVP_ENDPOINT dans ce fichier."
-        : "Ce dashboard n'est accessible qu'avec le lien privé transmis aux mariés.";
+        : "Entrez le mot de passe du tableau de bord.";
     } else {
       lockScreen.classList.add('hidden');
       app.classList.remove('hidden');
@@ -311,6 +346,7 @@
           document.getElementById('lastUpdate').textContent =
             'Mis à jour à ' + new Date().toLocaleTimeString('fr-FR');
           applyFilters();
+          dejaCharge = true;
           delete window[callbackName];
           script.remove();
           resolve(true);
@@ -319,7 +355,17 @@
         const script = document.createElement('script');
         script.src = RSVP_ENDPOINT + '?cle=' + encodeURIComponent(token) +
           '&callback=' + callbackName + '&t=' + Date.now();
+        // Le serveur répond sans appeler le callback quand le mot de passe est refusé
+        script.onload = () => {
+          if (!window[callbackName]) return;
+          delete window[callbackName];
+          script.remove();
+          accesRefuse();
+          resolve(false);
+        };
         script.onerror = () => {
+          // Le serveur répond, mais pas pour ce mot de passe ? On teste une requête publique.
+          if (!dejaCharge) serveurJoignable().then(ok => { if (ok) accesRefuse(); });
           document.getElementById('lastUpdate').textContent = 'Échec du chargement — vérifiez la connexion.';
           script.remove();
           resolve(false);
