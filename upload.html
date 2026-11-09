@@ -249,8 +249,16 @@
       deferredPrompt = e;
       installBtn.classList.remove('hidden');
     });
+    const dejaInstallee = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    if (!dejaInstallee) installBtn.classList.remove('hidden');
     installBtn.addEventListener('click', async () => {
-      if (!deferredPrompt) return;
+      if (!deferredPrompt) {
+        const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        alert(ios
+          ? "Pour installer : touchez le bouton Partager, puis « Sur l'écran d'accueil »."
+          : "Pour installer : dans Chrome ou Edge, cliquez sur l'icône d'installation à droite de la barre d'adresse, ou ouvrez le menu ⋮ puis « Caster, enregistrer et partager » > « Installer la page en tant qu'application ».");
+        return;
+      }
       deferredPrompt.prompt();
       await deferredPrompt.userChoice;
       deferredPrompt = null;
