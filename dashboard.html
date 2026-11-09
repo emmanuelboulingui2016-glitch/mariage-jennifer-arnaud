@@ -136,6 +136,7 @@
       <button type="button" class="vue-btn flex-1 rounded-full px-3 py-2 text-xs font-medium" data-vue="tout">Données complètes</button>
     </div>
     <p id="repartition" class="hidden text-center text-xs text-stone-500 -mt-2 mb-4"></p>
+    <div id="usageBox" class="hidden card p-4 mb-6"></div>
 
     <div class="grid grid-cols-3 gap-3 mb-6">
       <div class="card p-4 text-center">
@@ -162,6 +163,7 @@
       <a id="liensSendBtn" href="#" target="_blank" rel="noopener" class="block text-center w-full bg-wine text-white rounded-full py-3 text-sm font-medium">📲 Envoyer un lien sur WhatsApp</a>
       <button id="liensCopyNextBtn" type="button" class="w-full border border-wine text-wine rounded-full py-2.5 text-sm font-medium mt-2">Copier un lien pour un invité</button>
       <p id="liensDispo" class="text-xs text-center text-stone-500 mt-2"></p>
+      <button type="button" id="alerteNonInscrits" class="hidden w-full mt-3 rounded-2xl px-4 py-3 text-xs text-left" style="background:#fff7ed;color:#9a3412;border:1px solid #fed7aa"></button>
       <div class="flex gap-2 items-center mt-4">
         <input id="liensNombre" type="number" min="1" max="300" value="50" class="w-20 border border-stone-300 rounded-full px-3 py-2 text-sm text-center">
         <button id="liensBlankBtn" type="button" class="flex-1 bg-stone-800 text-white rounded-full py-2.5 text-sm font-medium">Créer des liens vierges</button>
@@ -178,7 +180,9 @@
         <select id="liensFilter" class="border border-stone-300 rounded-full px-3 py-2 text-xs bg-white">
           <option value="all">Tous</option>
           <option value="aenvoyer">À envoyer</option>
-          <option value="envoye">Envoyés</option>
+          <option value="noninscrits">Reçus, pas inscrits</option>
+          <option value="ouvert">Ouverts sans finir</option>
+          <option value="envoye">Envoyés, jamais ouverts</option>
           <option value="utilise">Utilisés</option>
         </select>
       </div>
@@ -290,6 +294,18 @@
     document.getElementById('titreTableau').textContent = TITRE;
     document.title = TITRE + ' — Mariage Jennifer & Arnaud';
     let vue = 'moi';
+    let ouvertures = {};
+    const APPAREIL = (() => {
+      const u = navigator.userAgent;
+      if (/iPhone/.test(u)) return 'iPhone';
+      if (/iPad/.test(u) || (/Macintosh/.test(u) && navigator.maxTouchPoints > 1)) return 'iPad';
+      if (/Android/.test(u)) return 'Android';
+      if (/Windows/.test(u)) return 'Windows';
+      if (/Macintosh|Mac OS/.test(u)) return 'Mac';
+      if (/Linux/.test(u)) return 'Linux';
+      return 'Autre';
+    })();
+    const EN_APPLI = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 
     const RSVP_ENDPOINT = "https://script.google.com/macros/s/AKfycbzRszatTa7oJLFwPMaCKtkLHJQ3OlggStRKi0zANrCORirV7YXx2-FFzKIsC__Zu4ru/exec";
 
@@ -358,7 +374,9 @@
         const callbackName = 'onDashboardData_' + Date.now();
         window[callbackName] = function (data) {
           allResponses = (data.reponses || []).map(r => ({ ...r, cote: r.cote || 'arnaud' }));
+          ouvertures = data.ouvertures || {};
           majStats();
+          renderUsage();
           document.getElementById('statVisites').textContent = data.visites ?? 0;
           document.getElementById('statScratchs').textContent = data.scratchs ?? 0;
           document.getElementById('lastUpdate').textContent =
@@ -372,7 +390,8 @@
 
         const script = document.createElement('script');
         script.src = RSVP_ENDPOINT + '?cle=' + encodeURIComponent(token) +
-          '&callback=' + callbackName + '&t=' + Date.now();
+          '&callback=' + callbackName + '&cote=' + COTE + '&appareil=' + APPAREIL + '&appli=' + (EN_APPLI ? '1' : '0') +
+          '&t=' + Date.now();
         // Le serveur répond sans appeler le callback quand le mot de passe est refusé
         script.onload = () => {
           if (!window[callbackName]) return;
@@ -478,11 +497,33 @@
       return '<span class="inline-block whitespace-nowrap align-middle text-[10px] px-2 py-0.5 rounded-full" style="' + style + '">Côté ' + NOM_COTE[c] + '</span>';
     }
 
+    function renderUsage() {
+      const box = document.getElementById('usageBox');
+      if (vue !== 'tout') { box.classList.add('hidden'); return; }
+      const fmt = iso => new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      const bloc = c => {
+        const liste = Array.isArray(ouvertures[c]) ? ouvertures[c] : [];
+        const appli = liste.some(o => o.appli);
+        const lignes = liste.length
+          ? liste.map(o => '<li>' + (o.appli ? '📱 Application installée' : '🌐 Navigateur') + ' · ' + escapeHtml(o.appareil) +
+              ' · dernière ouverture le ' + escapeHtml(fmt(o.dernier)) + '</li>').join('')
+          : '<li class="text-stone-400">Jamais ouvert pour l\'instant.</li>';
+        return '<div class="mb-3"><div class="text-sm font-medium">Tableau ' + (c === 'arnaud' ? "d'Arnaud" : 'de Jennifer') +
+          ' <span class="inline-block whitespace-nowrap align-middle text-[10px] px-2 py-0.5 rounded-full ' + (appli ? 'badge-oui">Installé' : 'bg-stone-100 text-stone-500">Pas encore installé') + '</span></div>' +
+          '<ul class="text-xs text-stone-600 mt-1 space-y-0.5">' + lignes + '</ul></div>';
+      };
+      box.innerHTML = '<div class="text-sm font-medium text-wine mb-2">📲 Utilisation des tableaux de bord</div>' +
+        bloc('jennifer') + bloc('arnaud') +
+        '<p class="text-[11px] text-stone-400">Une ligne par appareil. « Installé » apparaît dès que le tableau est ouvert depuis l\'application installée. Vos propres ouvertures (ex. sur votre ordinateur Windows) apparaissent aussi.</p>';
+      box.classList.remove('hidden');
+    }
+
     function changerVue(v) {
       vue = v;
       document.querySelectorAll('.vue-btn').forEach(b => b.classList.toggle('active', b.dataset.vue === v));
       document.querySelectorAll('.vue-moi').forEach(el => el.classList.toggle('hidden', v === 'tout'));
       majStats();
+      renderUsage();
       applyFilters();
     }
     document.querySelectorAll('.vue-btn').forEach(b => b.addEventListener('click', () => changerVue(b.dataset.vue)));
@@ -798,7 +839,18 @@
 
     function etatLien(l) {
       if (l.statut === 'utilise') return 'utilise';
+      if (l.ouvert) return 'ouvert';
       return l.envoye ? 'envoye' : 'aenvoyer';
+    }
+
+    function messageRelance(l) {
+      return [
+        (l.invite ? 'Bonjour ' + l.invite + ',' : 'Bonjour,'),
+        'Petit rappel : vous n\'avez pas encore confirmé votre présence au mariage de Jennifer et Arnaud, le vendredi 13 novembre 2026. 💍',
+        '👉 Votre lien personnel :\n' + lienUrl(l.code),
+        'Il suffit d\'ouvrir le lien, de remplir le formulaire jusqu\'au bout, puis de télécharger votre billet : il vous sera demandé à l\'entrée de la salle des fêtes.',
+        'Merci et à très bientôt !\nJennifer & Arnaud'
+      ].join('\n\n');
     }
 
     // Prochain lien vierge jamais envoyé (le plus ancien d'abord)
@@ -839,9 +891,20 @@
       const sent = allLiens.filter(l => etatLien(l) !== 'aenvoyer').length;
       document.getElementById('liensCount').textContent = allLiens.length + ' · ' + sent + ' envoyé' + (sent > 1 ? 's' : '') + ' · ' + used + ' inscrit' + (used > 1 ? 's' : '');
       majBoutonEnvoi();
+      const nOuvert = allLiens.filter(l => etatLien(l) === 'ouvert').length;
+      const nEnvoye = allLiens.filter(l => etatLien(l) === 'envoye').length;
+      const alerte = document.getElementById('alerteNonInscrits');
+      if (nOuvert + nEnvoye) {
+        alerte.innerHTML = '⚠️ <strong>' + (nOuvert + nEnvoye) + ' invité' + (nOuvert + nEnvoye > 1 ? 's ont reçu leur' : ' a reçu son') + ' lien sans s\'inscrire</strong>' +
+          (nOuvert ? ' (dont ' + nOuvert + ' qui l\'' + (nOuvert > 1 ? 'ont' : 'a') + ' ouvert sans aller au bout)' : '') +
+          '. Touchez ici pour les voir et les relancer.';
+        alerte.classList.remove('hidden');
+      } else {
+        alerte.classList.add('hidden');
+      }
       const q = document.getElementById('liensSearch').value.trim().toLowerCase();
       const f = document.getElementById('liensFilter').value;
-      const list = allLiens.filter(l => (f === 'all' || etatLien(l) === f) &&
+      const list = allLiens.filter(l => (f === 'all' || etatLien(l) === f || (f === 'noninscrits' && ['envoye', 'ouvert'].includes(etatLien(l)))) &&
         (l.invite + ' ' + l.inscrit + ' ' + l.code).toLowerCase().includes(q));
       const box = document.getElementById('liensList');
       box.innerHTML = '';
@@ -861,12 +924,15 @@
               <div class="text-sm font-medium truncate">${l.invite ? escapeHtml(l.invite) : (used ? escapeHtml(l.inscrit) : '<span class="text-stone-400">Lien vierge</span>')}</div>
               <div class="text-[11px] text-stone-400 break-all">${escapeHtml(lienUrl(l.code))}</div>
               ${used ? `<div class="text-[11px] text-wine mt-1">Inscrit : ${escapeHtml(l.inscrit)}${when ? ' · ' + escapeHtml(when) : ''}</div>` : ''}
+              ${etat === 'ouvert' ? `<div class="text-[11px] mt-1" style="color:#9a3412">Lien ouvert le ${escapeHtml(new Date(l.ouvert).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }))}, inscription pas terminée.</div>` : ''}
+              ${etat === 'envoye' ? `<div class="text-[11px] mt-1" style="color:#92400e">Lien envoyé, jamais ouvert pour l'instant.</div>` : ''}
             </div>
-            <span class="shrink-0 text-xs px-3 py-1 rounded-full ${used ? 'badge-non' : 'badge-oui'}" style="${etat === 'envoye' ? 'background:#fef3c7;color:#92400e' : ''}">${used ? 'Utilisé' : (etat === 'envoye' ? 'Envoyé' : 'À envoyer')}</span>
+            <span class="shrink-0 text-xs px-3 py-1 rounded-full text-center ${used ? 'badge-non' : 'badge-oui'}" style="${etat === 'envoye' ? 'background:#fef3c7;color:#92400e' : (etat === 'ouvert' ? 'background:#ffedd5;color:#9a3412' : '')}">${used ? 'Utilisé' : (etat === 'ouvert' ? 'Ouvert, pas inscrit' : (etat === 'envoye' ? 'Envoyé, pas inscrit' : 'À envoyer'))}</span>
           </div>
           <div class="flex flex-wrap justify-end gap-x-4 gap-y-1 mt-2 text-[11px]">
-            <button type="button" data-act="copy" class="text-stone-600 underline hover:text-wine">Copier le message</button>
+            <button type="button" data-act="copy" class="${etat !== 'aenvoyer' ? 'text-red-600 font-semibold' : 'text-stone-600'} underline hover:text-wine" title="${etat !== 'aenvoyer' ? 'Ce message a déjà été envoyé' : ''}">Copier le message</button>
             <a data-act="wa" href="https://wa.me/?text=${encodeURIComponent(messageInvitation(l))}" target="_blank" rel="noopener" class="text-stone-600 underline hover:text-wine">WhatsApp</a>
+            ${(etat === 'envoye' || etat === 'ouvert') ? `<a data-act="relance" href="https://wa.me/?text=${encodeURIComponent(messageRelance(l))}" target="_blank" rel="noopener" class="font-semibold underline" style="color:#9a3412">Relancer</a>` : ''}
             ${used ? '<button type="button" data-act="free" class="text-stone-500 underline hover:text-wine">Libérer</button>' : ''}
             <button type="button" data-act="del" class="text-stone-400 underline hover:text-red-700">Supprimer</button>
           </div>`;
@@ -970,6 +1036,11 @@
       }
     });
 
+    document.getElementById('alerteNonInscrits').addEventListener('click', () => {
+      document.getElementById('liensFilter').value = 'noninscrits';
+      renderLiens();
+      document.getElementById('liensList').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
     document.getElementById('liensSearch').addEventListener('input', renderLiens);
     document.getElementById('liensFilter').addEventListener('change', renderLiens);
 
