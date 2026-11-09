@@ -1,5 +1,6 @@
-const CACHE_NAME = 'rsvp-dashboard-v2';
-const ASSETS = ['./dashboard.html', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE_NAME = 'rsvp-dashboard-v3';
+const ASSETS = ['./dashboard.html', './manifest.json', './icon-192.png', './icon-512.png',
+  './upload.html', './manifest-photos.json', './icon-photos-192.png', './icon-photos-512.png'];
 const ASSET_PATHS = ASSETS.map(a => new URL(a, self.location).pathname);
 
 self.addEventListener('install', event => {

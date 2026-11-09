@@ -7,6 +7,11 @@
 <meta name="theme-color" content="#5b0d1b">
 <meta name="robots" content="noindex, nofollow, noimageindex">
 <title>Ajouter des photos & vidéos — Jennifer & Arnaud</title>
+<link rel="manifest" href="manifest-photos.json">
+<link rel="icon" type="image/png" href="icon-photos-192.png">
+<link rel="apple-touch-icon" href="icon-photos-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Photos J&A">
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
@@ -235,6 +240,32 @@
       if (refus) lock('Mot de passe incorrect. Réessayez, vos photos restent sélectionnées.');
       sendBtn.disabled = false;
     });
+
+    /* ===================== INSTALLATION SUR L'ORDINATEUR / LE TÉLÉPHONE ===================== */
+    let deferredPrompt = null;
+    const installBtn = document.getElementById('installBtn');
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.classList.remove('hidden');
+    });
+    installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      installBtn.classList.add('hidden');
+    });
+    window.addEventListener('appinstalled', () => installBtn.classList.add('hidden'));
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js').catch(() => { });
+      });
+    }
   </script>
+  <button id="installBtn" type="button"
+    class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 bg-wine text-white text-sm px-5 py-3 rounded-full shadow-lg z-[60]">
+    Installer l'application Photos
+  </button>
 </body>
 </html>
