@@ -357,7 +357,7 @@
       return new Promise(resolve => {
         const callbackName = 'onDashboardData_' + Date.now();
         window[callbackName] = function (data) {
-          allResponses = data.reponses || [];
+          allResponses = (data.reponses || []).map(r => ({ ...r, cote: r.cote || 'arnaud' }));
           majStats();
           document.getElementById('statVisites').textContent = data.visites ?? 0;
           document.getElementById('statScratchs').textContent = data.scratchs ?? 0;
@@ -452,7 +452,7 @@
     let currentFilter = 'all';
 
     function reponsesVue() {
-      return vue === 'tout' ? allResponses : allResponses.filter(r => r.cote === COTE);
+      return vue === 'tout' ? allResponses : allResponses.filter(r => (r.cote || 'arnaud') === COTE);
     }
 
     function majStats() {
@@ -787,7 +787,7 @@
         const cb = 'onLiens_' + Date.now();
         const s = document.createElement('script');
         window[cb] = data => {
-          if (data && Array.isArray(data.liens)) { allLiens = data.liens.reverse().filter(l => l.cote === COTE || !l.cote); renderLiens(); }
+          if (data && Array.isArray(data.liens)) { allLiens = data.liens.reverse().map(l => ({ ...l, cote: l.cote || 'arnaud' })).filter(l => l.cote === COTE); renderLiens(); }
           delete window[cb]; s.remove(); resolve(true);
         };
         s.onerror = () => { s.remove(); resolve(false); };
@@ -861,7 +861,6 @@
               <div class="text-sm font-medium truncate">${l.invite ? escapeHtml(l.invite) : (used ? escapeHtml(l.inscrit) : '<span class="text-stone-400">Lien vierge</span>')}</div>
               <div class="text-[11px] text-stone-400 break-all">${escapeHtml(lienUrl(l.code))}</div>
               ${used ? `<div class="text-[11px] text-wine mt-1">Inscrit : ${escapeHtml(l.inscrit)}${when ? ' · ' + escapeHtml(when) : ''}</div>` : ''}
-              ${!l.cote ? `<div class="text-[11px] mt-1 text-amber-700">Lien créé avant la séparation des tableaux. <button type="button" data-act="attr" class="underline font-medium">C'est un de mes invités</button></div>` : ''}
             </div>
             <span class="shrink-0 text-xs px-3 py-1 rounded-full ${used ? 'badge-non' : 'badge-oui'}" style="${etat === 'envoye' ? 'background:#fef3c7;color:#92400e' : ''}">${used ? 'Utilisé' : (etat === 'envoye' ? 'Envoyé' : 'À envoyer')}</span>
           </div>
@@ -878,8 +877,6 @@
           e.target.textContent = ok ? 'Copié ✓' : 'Échec de la copie';
           setTimeout(() => { e.target.textContent = 'Copier le message'; }, 2000);
         });
-        const attr = row.querySelector('[data-act="attr"]');
-        if (attr) attr.addEventListener('click', () => lienAction({ action: 'attribuerLien', code: l.code, cote: COTE }, 'Lien ajouté à vos invités ✓'));
         const free = row.querySelector('[data-act="free"]');
         if (free) free.addEventListener('click', () => {
           if (!confirm('Libérer ce lien ? La réponse déjà enregistrée reste dans la liste, et le lien pourra servir à une nouvelle inscription.')) return;
