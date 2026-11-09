@@ -702,10 +702,19 @@
     function lienUrl(code) { return SITE_URL + '?invite=' + encodeURIComponent(code); }
 
     function messageInvitation(l) {
-      return (l.invite ? 'Bonjour ' + l.invite + ',' : 'Bonjour,') +
-        '\n\nJennifer et Arnaud ont la joie de vous inviter à leur mariage, le vendredi 13 novembre 2026.' +
-        '\n\nVoici votre lien d\'invitation personnel pour confirmer votre présence :\n' + lienUrl(l.code) +
-        '\n\nCe lien vous est réservé et ne permet qu\'une seule inscription : merci de ne pas le transférer.';
+      return [
+        (l.invite ? 'Bonjour ' + l.invite + ',' : 'Bonjour,'),
+        'Jennifer et Arnaud ont la joie de vous inviter à leur mariage, le vendredi 13 novembre 2026. 💍',
+        '👉 Votre lien d\'invitation personnel :\n' + lienUrl(l.code),
+        'Comment faire (2 minutes) :\n' +
+          '1. Ouvrez votre lien.\n' +
+          '2. Confirmez votre présence en remplissant le formulaire avec votre nom.\n' +
+          '3. Téléchargez votre billet et gardez-le sur votre téléphone (ou imprimez-le).\n' +
+          '4. Le soir de la réception, présentez votre billet à l\'entrée : il vous sera demandé pour accéder à la salle des fêtes.',
+        '⚠️ Ce lien vous est réservé et ne permet qu\'une seule inscription : merci de ne pas le transférer. Si quelqu\'un d\'autre l\'utilise, vous ne pourrez plus vous inscrire.',
+        'Sur le site, vous trouverez aussi le programme de la journée et, le jour J, la galerie photos en direct.',
+        'Au plaisir de vous voir !\nJennifer & Arnaud'
+      ].join('\n\n');
     }
 
     async function copyText(text) {
