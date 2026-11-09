@@ -175,7 +175,7 @@
       </details>
       <p id="liensStatus" class="text-xs text-center text-stone-400 mt-2"></p>
       <div class="flex gap-2 mt-4 mb-3">
-        <input id="liensSearch" type="text" placeholder="Rechercher un lien..."
+        <input id="liensSearch" type="text" placeholder="Nom ou n° du lien..."
           class="flex-1 min-w-0 border border-stone-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-gold">
         <select id="liensFilter" class="border border-stone-300 rounded-full px-3 py-2 text-xs bg-white">
           <option value="all">Tous</option>
@@ -854,12 +854,13 @@
     }
 
     // Prochain lien vierge jamais envoyé (le plus ancien d'abord)
+    function numeroDe(l) { return (l.numero === null || l.numero === undefined || isNaN(l.numero)) ? 1e9 : Number(l.numero); }
+    function libelleNumero(l) { return numeroDe(l) < 1e9 ? 'N° ' + l.numero : 'N° ?'; }
+
     function prochainLien() {
-      for (let i = allLiens.length - 1; i >= 0; i--) {
-        const l = allLiens[i];
-        if (!l.invite && l.cote === COTE && etatLien(l) === 'aenvoyer') return l;
-      }
-      return null;
+      const candidats = allLiens.filter(l => !l.invite && l.cote === COTE && etatLien(l) === 'aenvoyer');
+      candidats.sort((a, b) => numeroDe(a) - numeroDe(b));
+      return candidats[0] || null;
     }
 
     // Marque le lien comme envoyé tout de suite à l'écran, puis sur le serveur
@@ -882,7 +883,7 @@
       btn.style.opacity = l ? '1' : '.5';
       document.getElementById('liensCopyNextBtn').disabled = !l;
       document.getElementById('liensDispo').textContent = l
-        ? dispo + ' lien' + (dispo > 1 ? 's' : '') + ' vierge' + (dispo > 1 ? 's' : '') + ' prêt' + (dispo > 1 ? 's' : '') + ' à envoyer. Chaque envoi prend un nouveau lien.'
+        ? dispo + ' lien' + (dispo > 1 ? 's' : '') + ' vierge' + (dispo > 1 ? 's' : '') + ' prêt' + (dispo > 1 ? 's' : '') + ' à envoyer. Prochain envoi : ' + libelleNumero(l) + '.'
         : 'Plus aucun lien vierge à envoyer : créez-en ci-dessous.';
     }
 
@@ -904,8 +905,10 @@
       }
       const q = document.getElementById('liensSearch').value.trim().toLowerCase();
       const f = document.getElementById('liensFilter').value;
+      const qNum = /^(n\s*°?\s*)?\d+$/.test(q) ? parseInt(q.replace(/\D/g, ''), 10) : null;
       const list = allLiens.filter(l => (f === 'all' || etatLien(l) === f || (f === 'noninscrits' && ['envoye', 'ouvert'].includes(etatLien(l)))) &&
-        (l.invite + ' ' + l.inscrit + ' ' + l.code).toLowerCase().includes(q));
+        (qNum !== null ? numeroDe(l) === qNum : (l.invite + ' ' + l.inscrit + ' ' + l.code).toLowerCase().includes(q)))
+        .sort((a, b) => numeroDe(a) - numeroDe(b));
       const box = document.getElementById('liensList');
       box.innerHTML = '';
       if (!list.length) {
@@ -921,7 +924,7 @@
         row.innerHTML = `
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
-              <div class="text-sm font-medium truncate">${l.invite ? escapeHtml(l.invite) : (used ? escapeHtml(l.inscrit) : '<span class="text-stone-400">Lien vierge</span>')}</div>
+              <div class="text-sm font-medium truncate"><span class="inline-block align-middle text-[11px] font-semibold px-2 py-0.5 mr-1 rounded-full bg-wine text-white">${escapeHtml(libelleNumero(l))}</span>${l.invite ? escapeHtml(l.invite) : (used ? escapeHtml(l.inscrit) : '<span class="text-stone-400">Lien vierge</span>')}</div>
               <div class="text-[11px] text-stone-400 break-all">${escapeHtml(lienUrl(l.code))}</div>
               ${used ? `<div class="text-[11px] text-wine mt-1">Inscrit : ${escapeHtml(l.inscrit)}${when ? ' · ' + escapeHtml(when) : ''}</div>` : ''}
               ${etat === 'ouvert' ? `<div class="text-[11px] mt-1" style="color:#9a3412">Lien ouvert le ${escapeHtml(new Date(l.ouvert).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }))}, inscription pas terminée.</div>` : ''}
@@ -1005,7 +1008,7 @@
       if (!l) { e.preventDefault(); return; }
       e.currentTarget.href = 'https://wa.me/?text=' + encodeURIComponent(messageInvitation(l));
       marquerEnvoye(l);
-      document.getElementById('liensStatus').textContent = 'Lien …' + l.code.slice(-4) + ' envoyé. Le bouton prépare déjà le lien suivant.';
+      document.getElementById('liensStatus').textContent = 'Lien ' + libelleNumero(l) + ' envoyé. Le bouton prépare déjà le lien suivant.';
     });
 
     document.getElementById('liensCopyNextBtn').addEventListener('click', async () => {
@@ -1015,7 +1018,7 @@
       const status = document.getElementById('liensStatus');
       if (!ok) { status.textContent = 'Échec de la copie.'; return; }
       marquerEnvoye(l);
-      status.textContent = 'Message copié ✓ (lien …' + l.code.slice(-4) + '). Collez-le dans la discussion de l\'invité.';
+      status.textContent = 'Message copié ✓ (lien ' + libelleNumero(l) + '). Collez-le dans la discussion de l\'invité.';
     });
 
     document.getElementById('liensBlankBtn').addEventListener('click', async () => {
